@@ -1,0 +1,11 @@
+aiogram
+python-telegram-bot[job-queue]
+fastapi
+uvicorn[standard]
+aiohttp
+requests
+PyJWT
+python-dotenv
+pytz
+flask
+python-dotenv
