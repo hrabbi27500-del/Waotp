@@ -32,8 +32,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "6329569356:AAEfPA03ZjZAByKhGhNUc8n_x5EATZpHDGw")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "5624278091"))
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", ""))
 BASE_URL = os.environ.get("BASE_URL", "")
 
 # Render-compatible port
@@ -136,8 +136,7 @@ async def health():
 # Enhanced keep-alive system for Render
 async def keep_alive_enhanced():
     keep_alive_urls = [
-        "https://wsotpall-wdpk.onrender.com",
-        "https://wschecker-f1ug.onrender.com"
+        "https://waotp-yldb.onrender.com"
     ]
     
     while True:
