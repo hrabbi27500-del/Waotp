@@ -32,12 +32,52 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", ""))
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "6329569356:AAEfPA03ZjZAByKhGhNUc8n_x5EATZpHDGw")
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "5624278091"))
 BASE_URL = os.environ.get("BASE_URL", "")
 
 # Render-compatible port
 RENDER_PORT = int(os.environ.get("PORT", 10000))
+
+# Add these constants after your existing constants (around line 30-40)
+# Payment group settings
+PAYMENT_GROUP_ID = os.environ.get("PAYMENT_GROUP_ID", "-1003768366485")  # Replace with your group ID
+PAYMENT_GROUP_LINK = os.environ.get("PAYMENT_GROUP_LINK", "https://t.me/livepaymentupdate")
+
+# Fake payment settings
+FAKE_PAYMENT_GROUP_ID = os.environ.get("FAKE_PAYMENT_GROUP_ID", PAYMENT_GROUP_ID)  # Can be same or different group
+FAKE_PAYMENT_ENABLED = os.environ.get("FAKE_PAYMENT_ENABLED", "True").lower() == "true"
+
+# Add these constants after your existing constants
+REQUIRED_CHANNEL = "@CashxByte"  # Main channel
+REQUIRED_PAYMENT_GROUP = os.environ.get("REQUIRED_PAYMENT_GROUP", "@livepaymentupdate")  # Payment group username
+CHANNEL_INVITE_LINK = "https://t.me/CashxByte"  # Channel invite link
+PAYMENT_GROUP_INVITE_LINK = os.environ.get("PAYMENT_GROUP_INVITE_LINK", "https://t.me/livepaymentupdate")  # Group invite link
+
+# Random user data for fake payments
+FAKE_USERNAMES = [
+    "Rakib_Hasan", "Sakib_Khan", "Rafiq_Islam", "Sohel_Rana", "Nayeem_Chy",
+    "Fahim_Ahmed", "Ridoy_Hossain", "Tanvir_Haque", "Saif_Uddin", "Shanto_Chy",
+    "Mahmud_Hasan", "Habib_Rahman", "Shahin_Ahmed", "Rashed_Khan", "Mamun_Mia",
+    "Asif_Iqbal", "Rony_Chy", "Shakil_Hossain", "Imran_Hasan", "Nurul_Islam"
+]
+
+FAKE_FIRST_NAMES = [
+    "Rakib", "Sakib", "Rafiq", "Sohel", "Nayeem", "Fahim", "Ridoy", 
+    "Tanvir", "Saif", "Shanto", "Mahmud", "Habib", "Shahin", "Rashed",
+    "Mamun", "Asif", "Rony", "Shakil", "Imran", "Nurul"
+]
+
+FAKE_LAST_NAMES = [
+    "Hasan", "Khan", "Islam", "Rana", "Chy", "Ahmed", "Hossain", "Haque",
+    "Uddin", "Rahman", "Mia", "Iqbal", "Chowdhury", "Begum", "Ali", "Miah"
+]
+
+FAKE_COUNTRIES = [
+    "Bangladesh", "India", "Pakistan", "USA", "Canada", "UK", "UAE", 
+    "Saudi Arabia", "Malaysia", "Singapore", "Thailand", "Indonesia"
+]
+
 
 # File paths with Render.com compatibility
 if 'RENDER' in os.environ:
@@ -62,14 +102,14 @@ status_map = {
     3: "⚠️ Try Again Later",
     4: "🚫 Not Register",
     7: "🚫 Ban Number",
-    5: "🟡 Pending Verification",
+    5: "⏳️ Recent Request",
     6: "🔴 Wrong OTP",
     8: "🟠 Limited",
     9: "🔶 Restricted", 
     10: "🟣 VIP Number",
     11: "⚠️ Add Again",
     12: "🟤 Temp Blocked",
-    13: "Used Number",
+    13: "⚠️ Bad Number",
     14: "🌀 Processing",
     15: "📞 Call Required",
     -1: "❌ Token Expired",
@@ -96,7 +136,8 @@ async def health():
 # Enhanced keep-alive system for Render
 async def keep_alive_enhanced():
     keep_alive_urls = [
-        "https://waotp-yldb.onrender.com"
+        "https://wsotpall-wdpk.onrender.com",
+        "https://wschecker-f1ug.onrender.com"
     ]
     
     while True:
@@ -123,7 +164,7 @@ async def random_ping():
             await asyncio.sleep(random_time)
             
             async with aiohttp.ClientSession() as session:
-                async with session.get("https://waotp-ppq1.onrender.com", timeout=10) as response:
+                async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
                     print(f"🎲 Random ping sent: Status {response.status}")
                     
         except Exception as e:
@@ -133,7 +174,7 @@ async def immediate_ping():
     await asyncio.sleep(30)
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get("https://waotp-ppq1.onrender.com", timeout=10) as response:
+            async with session.get("https://webck-9utn.onrender.com", timeout=10) as response:
                 print(f"🚀 Immediate startup ping: Status {response.status}")
     except Exception as e:
         print(f"⚠️ Immediate ping failed: {e}")
@@ -782,8 +823,20 @@ async def show_admin_statistics(update: Update, context: CallbackContext):
     await context.bot.send_message(ADMIN_ID, final_message, parse_mode='none')
 
 async def statistics_command(update: Update, context: CallbackContext):
-    """Handle /statistics command for both users and admin"""
     user_id = update.effective_user.id
+    
+    # ✅ চ্যানেল মেম্বারশিপ চেক
+    if user_id != ADMIN_ID:
+        REQUIRED_CHANNEL = "@CashxByte"
+        try:
+            member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
+            allowed_status = ['member', 'administrator', 'creator']
+            if member.status not in allowed_status:
+                await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+                return
+        except:
+            await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+            return
     
     if user_id == ADMIN_ID:
         # Admin sees two buttons: Top Performers and All Statistics
@@ -893,7 +946,7 @@ async def show_top_performers(query, context):
     
     # =============== PART 2: TOP PERFORMERS LIST ===============
     # Split users into chunks of 15-20 users per message
-    users_per_chunk = 100
+    users_per_chunk = 50
     total_chunks = (len(user_stats) + users_per_chunk - 1) // users_per_chunk
     
     # Send user stats in chunks
@@ -1409,11 +1462,23 @@ async def delete_single_number_async(session, token, record_id, username):
         print(f"❌ Delete error for {record_id}: {e}")
         return False
 
-async def submit_otp_async(session, token, phone, code):
+async def submit_otp_async(session, token, phone, code, cc='1'):
+    """
+    Submit OTP with country code support
+    """
     try:
         headers = {"Admin-Token": token}
-        otp_url = f"{BASE_URL}/z-number-base/allNum/uploadCode?phoneNum={phone}&code={code}"
-        async with session.get(otp_url, headers=headers, timeout=10) as response:
+        
+        # Create URL with country code
+        otp_url = f"{BASE_URL}/z-number-base/allNum/uploadCode?cc={cc}&phoneNum={phone}&code={code}"
+        
+        print(f"🔄 Submitting OTP for {phone} (CC:{cc}) with code {code}")
+        print(f"📡 URL: {otp_url}")
+        
+        async with session.get(otp_url, headers=headers, timeout=15) as response:
+            response_text = await response.text()
+            print(f"📥 OTP Response: Status={response.status}, Body={response_text[:200]}")
+            
             if response.status == 200:
                 try:
                     result = await response.json(content_type=None)
@@ -1421,21 +1486,28 @@ async def submit_otp_async(session, token, phone, code):
                         print(f"✅ OTP submitted successfully for {phone}")
                         return True, "OTP verified successfully"
                     else:
-                        print(f"❌ OTP submission failed for {phone}: {result.get('msg', 'Unknown error')}")
-                        return False, result.get('msg', 'Unknown error')
-                except:
-                    text_result = await response.text()
-                    if "success" in text_result.lower() or "200" in text_result:
+                        error_msg = result.get('msg', 'Unknown error')
+                        print(f"❌ OTP failed: {error_msg}")
+                        return False, error_msg
+                except json.JSONDecodeError:
+                    if "success" in response_text.lower() or "200" in response_text:
                         print(f"✅ OTP submitted successfully for {phone} (text response)")
                         return True, "OTP verified successfully"
                     else:
-                        print(f"❌ OTP submission failed for {phone}: {text_result}")
-                        return False, text_result
+                        print(f"❌ OTP failed: {response_text}")
+                        return False, response_text
+            elif response.status == 401:
+                print(f"❌ Token expired for OTP submission")
+                return False, "Token expired! Please refresh server."
             else:
-                print(f"❌ OTP submission failed for {phone}: Status {response.status}")
+                print(f"❌ HTTP Error {response.status} for OTP submission")
                 return False, f"HTTP Error: {response.status}"
+                
+    except asyncio.TimeoutError:
+        print(f"❌ OTP submission timeout for {phone}")
+        return False, "Request timeout! Network issue."
     except Exception as e:
-        print(f"❌ OTP submission error for {phone}: {e}")
+        print(f"❌ OTP submission error for {phone}: {type(e).__name__}: {e}")
         return False, str(e)
 
 async def get_user_settlements(session, token, user_id, page=1, page_size=2):
@@ -1490,6 +1562,505 @@ async def get_user_settlements(session, token, user_id, page=1, page_size=2):
     except Exception as e:
         print(f"❌ Exception in get_user_settlements: {e}")
         return None, str(e)
+
+
+# ============ FAKE PAYMENT FUNCTIONS ============
+
+def generate_fake_payment_details():
+    """Generate random fake payment details with realistic masked data"""
+    import random
+    
+    # Generate random earnings between 2 and 10 USD
+    total_usd = round(random.uniform(2.0, 10.0), 2)
+    
+    # Generate realistic personal counts (based on earnings)
+    personal_count = random.randint(int(total_usd * 8), int(total_usd * 12))
+    personal_earnings = round(personal_count * 0.10, 2)
+    
+    # Adjust to match total
+    if personal_earnings > total_usd:
+        personal_earnings = round(total_usd * 0.7, 2)
+        personal_count = int(personal_earnings / 0.10)
+    
+    # Friend counts (realistic)
+    friend_count = random.randint(5, int(total_usd * 5))
+    friend_earnings = round(friend_count * 0.10, 2)
+    commission = round(friend_count * 0.002, 2)
+    
+    # Calculate total
+    calculated_total = personal_earnings + friend_earnings + commission
+    if abs(calculated_total - total_usd) > 0.5:
+        total_usd = round(calculated_total, 2)
+    
+    # Generate realistic user name (like real Telegram users)
+    first_names = ["Rakib", "Sakib", "Rafiq", "Sohel", "Nayeem", "Fahim", "Ridoy", "Tanvir", "Saif", "Shanto"]
+    last_names = ["Hasan", "Khan", "Islam", "Rana", "Ahmed", "Hossain", "Haque", "Uddin", "Rahman", "Mia"]
+    
+    first_name = random.choice(first_names)
+    last_name = random.choice(last_names)
+    username = f"{first_name}_{last_name}"
+    
+    # Generate realistic user ID (7-10 digits like Telegram IDs)
+    user_id = str(random.randint(1000000, 999999999))
+    
+    # Generate realistic telegram username
+    telegram_username = f"{first_name.lower()}{random.randint(100, 999)}"
+    
+    # Generate realistic country
+    countries = ["Bangladesh", "India", "Pakistan", "USA", "Canada", "UK", "UAE", "Saudi Arabia", "Malaysia"]
+    country = random.choice(countries)
+    
+    # Generate realistic friends list
+    num_friends = random.randint(1, 3)
+    friends_details = []
+    
+    for i in range(num_friends):
+        friend_first = random.choice(first_names)
+        friend_last = random.choice(last_names)
+        friend_name = f"{friend_first} {friend_last}"
+        friend_telegram = f"{friend_first.lower()}{random.randint(10, 99)}"
+        friend_amount = round(random.uniform(0.5, 3.0), 2)
+        
+        friends_details.append({
+            'name': friend_name,
+            'telegram': friend_telegram,
+            'amount': friend_amount
+        })
+    
+    return {
+        'total_usd': total_usd,
+        'total_bdt': round(total_usd * 125, 0),
+        'personal_count': personal_count,
+        'personal_earnings': personal_earnings,
+        'friend_count': friend_count,
+        'friend_earnings': friend_earnings,
+        'commission': commission,
+        'username': username,
+        'user_id': user_id,
+        'telegram_username': telegram_username,
+        'country': country,
+        'friends_details': friends_details
+    }
+
+
+async def send_fake_payment_confirmation(context: CallbackContext, count: int = 1):
+    """
+    Send fake payment confirmation messages to payment group
+    Looks EXACTLY like real payment confirmations with proper masking
+    """
+    if not FAKE_PAYMENT_ENABLED:
+        print("⚠️ Fake payment notifications are disabled")
+        return 0
+    
+    sent_count = 0
+    current_time = datetime.now()
+    
+    for i in range(count):
+        try:
+            # Generate random payment details
+            payment = generate_fake_payment_details()
+            
+            # Add small delay between messages
+            if i > 0:
+                await asyncio.sleep(random.uniform(2, 5))
+            
+            # Current time with random offset
+            msg_time = current_time - timedelta(seconds=random.randint(0, 300))
+            time_str = msg_time.strftime('%d %B %Y, %H:%M:%S')
+            
+            # ============ MASK THE USER DETAILS ============
+            # Mask user ID: first 3 + xxxx + last 3
+            user_id = payment['user_id']
+            if len(user_id) >= 6:
+                first_three = user_id[:3]
+                last_three = user_id[-3:]
+                masked_user_id = f"{first_three}xxxx{last_three}"
+            elif len(user_id) >= 4:
+                masked_user_id = f"{user_id[:2]}xx{user_id[-2:]}"
+            else:
+                masked_user_id = "xxx"
+            
+            # Mask username: first 2 + xxx + last 2
+            username = payment['username']
+            if len(username) >= 4:
+                first_two = username[:2]
+                last_two = username[-2:]
+                masked_username = f"{first_two}xxx{last_two}"
+            elif len(username) >= 3:
+                masked_username = f"{username[:1]}xx{username[-1:]}"
+            else:
+                masked_username = "xxx"
+            
+            # Mask telegram username
+            telegram_username = payment['telegram_username']
+            masked_telegram = ""
+            if telegram_username:
+                if len(telegram_username) >= 4:
+                    first_two = telegram_username[:2]
+                    last_two = telegram_username[-2:]
+                    masked_telegram = f"{first_two}xxx{last_two}"
+                elif len(telegram_username) >= 3:
+                    masked_telegram = f"{telegram_username[:1]}xx{telegram_username[-1:]}"
+                else:
+                    masked_telegram = "xxx"
+            
+            # Create message - NO MARKDOWN
+            message = f"💰 PAYMENT CONFIRMATION 💰\n\n"
+            message += f"🕐 Time: {time_str}\n\n"
+            
+            message += f"👤 User: {masked_username}\n"
+            message += f"🆔 User ID: {masked_user_id}\n"
+            if masked_telegram:
+                message += f"📱 Telegram: @{masked_telegram}\n"
+            
+            message += f"\n📊 Payment Details:\n"
+            message += f"├─ 🔢 Personal Count: {payment['personal_count']}\n"
+            message += f"├─ 💵 Personal Earnings: ${payment['personal_earnings']:.2f}\n"
+            
+            if payment['friend_count'] > 0:
+                message += f"├─ 👥 Friend Count: {payment['friend_count']}\n"
+                message += f"├─ 💰 Friends Earned: ${payment['friend_earnings']:.2f}\n"
+            
+            if payment['commission'] > 0:
+                message += f"├─ 💸 Commission: ${payment['commission']:.2f}\n"
+            
+            message += f"├─ 📈 Total USD: ${payment['total_usd']:.2f}\n"
+            message += f"└─ 🇧🇩 Total BDT: {payment['total_bdt']:.0f}\n\n"
+            
+            # Add masked friends info
+            if payment['friends_details']:
+                message += f"👥 Friends to Collect From ({len(payment['friends_details'])} friends):\n"
+                for j, friend in enumerate(payment['friends_details'], 1):
+                    friend_name = friend['name']
+                    friend_telegram = friend.get('telegram', '')
+                    friend_amount = friend.get('amount', 0)
+                    
+                    # Mask friend name
+                    if len(friend_name) >= 4:
+                        first_two = friend_name[:2]
+                        last_two = friend_name[-2:]
+                        masked_friend_name = f"{first_two}xxx{last_two}"
+                    elif len(friend_name) >= 3:
+                        masked_friend_name = f"{friend_name[:1]}xx{friend_name[-1:]}"
+                    else:
+                        masked_friend_name = "xxx"
+                    
+                    # Mask friend telegram
+                    masked_friend_telegram = ""
+                    if friend_telegram:
+                        if len(friend_telegram) >= 4:
+                            first_two = friend_telegram[:2]
+                            last_two = friend_telegram[-2:]
+                            masked_friend_telegram = f"{first_two}xxx{last_two}"
+                        elif len(friend_telegram) >= 3:
+                            masked_friend_telegram = f"{friend_telegram[:1]}xx{friend_telegram[-1:]}"
+                        else:
+                            masked_friend_telegram = "xxx"
+                    
+                    message += f"├─ {j}. {masked_friend_name}"
+                    if masked_friend_telegram:
+                        message += f" (@{masked_friend_telegram})"
+                    message += f"\n├─   └─ ${friend_amount:.2f}\n"
+            
+            # Add random transaction ID
+            tx_id = f"PAY-{msg_time.strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
+            
+            message += f"\n✅ Status: Payment Completed\n"
+            message += f"🔒 Privacy: User details masked for security\n"
+            message += f"📨 Transaction ID: {tx_id}\n\n"
+            message += f"#PaymentConfirmation #{masked_user_id}"
+            
+            # Send to group - NO MARKDOWN
+            await context.bot.send_message(
+                chat_id=FAKE_PAYMENT_GROUP_ID,
+                text=message,
+                parse_mode='none'
+            )
+            sent_count += 1
+            print(f"✅ Fake payment #{i+1} sent to group")
+            
+        except Exception as e:
+            print(f"❌ Error sending fake payment #{i+1}: {e}")
+    
+    return sent_count
+
+
+async def forward_payment_confirmation_to_group(context: CallbackContext, user_id: str, username: str, 
+                                                telegram_username: str, total_usd: float, total_bdt: float,
+                                                personal_count: int, personal_earnings: float,
+                                                friend_count: int, friend_earnings: float,
+                                                commission: float, friends_details: list, is_fake: bool = False):
+    """
+    Forward payment confirmation to a separate Telegram group with masked user info
+    No Markdown - plain text only
+    """
+    try:
+        # Mask user ID: first 3 digits + xxxx + last 3 digits
+        masked_user_id = user_id
+        if len(user_id) >= 6:
+            first_three = user_id[:3]
+            last_three = user_id[-3:]
+            masked_user_id = f"{first_three}xxxx{last_three}"
+        elif len(user_id) >= 4:
+            masked_user_id = f"{user_id[:2]}xx{user_id[-2:]}"
+        else:
+            masked_user_id = "xxx"
+        
+        # Mask username: first 2 characters + xxx + last 2 characters
+        masked_username = username
+        if len(username) >= 4:
+            first_two = username[:2]
+            last_two = username[-2:]
+            masked_username = f"{first_two}xxx{last_two}"
+        elif len(username) >= 3:
+            masked_username = f"{username[:1]}xx{username[-1:]}"
+        else:
+            masked_username = "xxx"
+        
+        # Mask telegram username if exists
+        masked_telegram = ""
+        if telegram_username:
+            if len(telegram_username) >= 4:
+                first_two = telegram_username[:2]
+                last_two = telegram_username[-2:]
+                masked_telegram = f"{first_two}xxx{last_two}"
+            elif len(telegram_username) >= 3:
+                masked_telegram = f"{telegram_username[:1]}xx{telegram_username[-1:]}"
+            else:
+                masked_telegram = "xxx"
+        
+        # Current time
+        current_time = datetime.now().strftime('%d %B %Y, %H:%M:%S')
+        
+        # Calculate total counts from friends_details
+        total_friend_counts = sum(f.get('counts', 0) for f in friends_details)
+        
+        # Create masked message - NO MARKDOWN, plain text
+        message = f"💰 PAYMENT CONFIRMATION 💰\n\n"
+        message += f"🕐 Time: {current_time}\n\n"
+        
+        message += f"👤 User: {masked_username}\n"
+        message += f"🆔 User ID: {masked_user_id}\n"
+        if masked_telegram:
+            message += f"📱 Telegram: @{masked_telegram}\n"
+        
+        message += f"\n📊 Payment Details:\n"
+        message += f"├─ 🔢 Personal Count: {personal_count}\n"
+        message += f"├─ 💵 Personal Earnings: ${personal_earnings:.2f}\n"
+        
+        # Show friend details with both count and earnings
+        if friends_details and len(friends_details) > 0:
+            # Show total friend count and total earnings
+            message += f"├─ 👥 Total Friends: {len(friends_details)}\n"
+            message += f"├─ 🔢 Total Friend Counts: {total_friend_counts}\n"
+            message += f"├─ 💰 Total Friends Earned: ${friend_earnings:.2f}\n"
+        
+        if commission > 0:
+            message += f"├─ 💸 Commission: ${commission:.2f}\n"
+        
+        message += f"├─ 📈 Total USD: ${total_usd:.2f}\n"
+        message += f"└─ 🇧🇩 Total BDT: {total_bdt:.0f}\n\n"
+        
+        # Add friends list with counts and earnings
+        if friends_details and len(friends_details) > 0:
+            message += f"👥 Friends Details ({len(friends_details)} friends):\n"
+            for i, friend in enumerate(friends_details, 1):
+                friend_name = friend.get('name', 'Unknown')
+                friend_telegram = friend.get('telegram', '')
+                friend_counts = friend.get('counts', 0)
+                friend_amount = friend.get('amount', 0)
+                
+                # Mask friend name: first 2 + xxx + last 2
+                masked_friend_name = friend_name
+                if len(friend_name) >= 4:
+                    first_two = friend_name[:2]
+                    last_two = friend_name[-2:]
+                    masked_friend_name = f"{first_two}xxx{last_two}"
+                elif len(friend_name) >= 3:
+                    masked_friend_name = f"{friend_name[:1]}xx{friend_name[-1:]}"
+                else:
+                    masked_friend_name = "xxx"
+                
+                # Mask friend telegram if exists
+                masked_friend_telegram = ""
+                if friend_telegram:
+                    if len(friend_telegram) >= 4:
+                        first_two = friend_telegram[:2]
+                        last_two = friend_telegram[-2:]
+                        masked_friend_telegram = f"{first_two}xxx{last_two}"
+                    elif len(friend_telegram) >= 3:
+                        masked_friend_telegram = f"{friend_telegram[:1]}xx{friend_telegram[-1:]}"
+                    else:
+                        masked_friend_telegram = "xxx"
+                
+                message += f"├─ {i}. {masked_friend_name}"
+                if masked_friend_telegram:
+                    message += f" (@{masked_friend_telegram})"
+                message += f"\n├─   ├─ 🔢 Counts: {friend_counts}\n"
+                message += f"├─   └─ 💰 Earned: ${friend_amount:.2f}\n"
+        
+        # Add fake indicator if it's a fake payment
+        if is_fake:
+            message += f"\n⚠️ Note: This is a simulated confirmation for testing\n"
+        
+        message += f"\n✅ Status: Payment Completed\n"
+        message += f"🔒 Privacy: User details masked for security\n\n"
+        message += f"#PaymentConfirmation #{masked_user_id}"
+        
+        # Send to group - NO MARKDOWN
+        try:
+            await context.bot.send_message(
+                chat_id=PAYMENT_GROUP_ID,
+                text=message,
+                parse_mode='none'
+            )
+            print(f"✅ Payment confirmation forwarded to group for user {masked_user_id}")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to send payment confirmation to group: {e}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error in forward_payment_confirmation_to_group: {e}")
+        return False
+
+
+# ============ FAKE PAYMENT COMMAND HANDLERS ============
+
+async def fake_payment_command(update: Update, context: CallbackContext):
+    """
+    Command to send fake payment confirmations
+    Usage: /fakepay [count]
+    Example: /fakepay 10 - sends 10 fake confirmations
+             /fakepay - sends 1 fake confirmation
+    """
+    user_id = update.effective_user.id
+    
+    # Admin only command
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    # Parse count from command
+    count = 1
+    if context.args:
+        try:
+            count = int(context.args[0])
+            if count < 1:
+                count = 1
+            if count > 100:  # Limit to 100 messages per command
+                count = 100
+                await update.message.reply_text("⚠️ Maximum 100 messages per command. Sending 100...")
+        except ValueError:
+            await update.message.reply_text("❌ Invalid count! Please provide a number.\nExample: `/fakepay 10`")
+            return
+    
+    # Check if fake payments are enabled
+    if not FAKE_PAYMENT_ENABLED:
+        await update.message.reply_text(
+            "❌ Fake payments are disabled!\n\n"
+            "Enable them by setting `FAKE_PAYMENT_ENABLED=True` in environment variables."
+        )
+        return
+    
+    # Send initial message
+    processing_msg = await update.message.reply_text(f"🔄 Sending {count} fake payment confirmation(s)...")
+    
+    try:
+        sent_count = await send_fake_payment_confirmation(context, count)
+        
+        await processing_msg.edit_text(
+            f"✅ Fake Payment Confirmation(s) Sent!\n\n"
+            f"📊 Summary:\n"
+            f"├─ 📨 Requested: {count}\n"
+            f"├─ ✅ Sent: {sent_count}\n"
+            f"└─ ❌ Failed: {count - sent_count}\n\n"
+            f"📢 Target Group: {FAKE_PAYMENT_GROUP_ID}\n"
+            f"🕐 Time: {datetime.now().strftime('%H:%M:%S')}"
+        )
+        
+    except Exception as e:
+        await processing_msg.edit_text(f"❌ Error sending fake payments: {e}")
+
+
+async def fake_payment_toggle_command(update: Update, context: CallbackContext):
+    """
+    Command to enable/disable fake payments
+    Usage: /fakeenable - enables fake payments
+           /fakedisable - disables fake payments
+    """
+    user_id = update.effective_user.id
+    
+    # Admin only command
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    global FAKE_PAYMENT_ENABLED
+    
+    command = context.args[0].lower() if context.args else ""
+    
+    if command == "enable" or command == "on":
+        FAKE_PAYMENT_ENABLED = True
+        status = "ENABLED ✅"
+    elif command == "disable" or command == "off":
+        FAKE_PAYMENT_ENABLED = False
+        status = "DISABLED ❌"
+    else:
+        await update.message.reply_text(
+            "❌ Usage:\n"
+            "`/fakeenable` - Enable fake payments\n"
+            "`/fakedisable` - Disable fake payments\n\n"
+            f"Current status: {'✅ ENABLED' if FAKE_PAYMENT_ENABLED else '❌ DISABLED'}"
+        )
+        return
+    
+    await update.message.reply_text(
+        f"✅ Fake Payments {status}\n\n"
+        f"📢 Status: {'✅ Active' if FAKE_PAYMENT_ENABLED else '❌ Inactive'}\n"
+        f"📨 Target Group: {FAKE_PAYMENT_GROUP_ID}\n"
+        f"🕐 Updated: {datetime.now().strftime('%H:%M:%S')}"
+    )
+
+
+async def fake_payment_status_command(update: Update, context: CallbackContext):
+    """
+    Command to show fake payment settings
+    Usage: /fakestatus
+    """
+    user_id = update.effective_user.id
+    
+    # Admin only command
+    if user_id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    # Generate a sample fake payment to show
+    sample = generate_fake_payment_details()
+    
+    message = f"📊 Fake Payment Settings\n\n"
+    message += f"✅ Status: {'ENABLED' if FAKE_PAYMENT_ENABLED else 'DISABLED'}\n"
+    message += f"📨 Target Group: {FAKE_PAYMENT_GROUP_ID}\n"
+    message += f"👥 Total Users in Database: {len(FAKE_USERNAMES)}\n"
+    message += f"🌍 Countries Available: {len(FAKE_COUNTRIES)}\n\n"
+    
+    message += f"📝 Sample Fake Payment:\n"
+    message += f"├─ 👤 Username: {sample['username']}\n"
+    message += f"├─ 💰 Amount: ${sample['total_usd']:.2f}\n"
+    message += f"├─ 🔢 Counts: {sample['personal_count']}\n"
+    message += f"├─ 👥 Friends: {len(sample['friends_details'])}\n"
+    message += f"└─ 🌍 Country: {sample['country']}\n\n"
+    
+    message += f"📋 Commands:\n"
+    message += f"• `/fakepay [count]` - Send fake confirmations\n"
+    message += f"• `/fakeenable` - Enable fake payments\n"
+    message += f"• `/fakedisable` - Disable fake payments\n"
+    message += f"• `/fakestatus` - Show this status\n\n"
+    
+    message += f"💡 Note: All user details in fake payments are randomly generated."
+    
+    await update.message.reply_text(message, parse_mode='none')
+
 
 class AccountManager:
     def __init__(self):
@@ -2005,97 +2576,144 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     text = update.message.text.strip()
     
-    if update.message.reply_to_message:
-        replied_message = update.message.reply_to_message.text
-        print(f"🔍 Checking OTP submission - User: {user_id}, Text: {text}")
-        print(f"📩 Replied message: {replied_message}")
-        
-        # নম্বর এক্সট্র্যাক্ট করা
-        phone_match = re.search(r'(\d{10})', replied_message)
-        if phone_match:
-            phone = phone_match.group(1)
-            print(f"📱 Found phone in reply: {phone}")
-            
-            # ডিবাগ: active_numbers কি আছে?
-            print(f"📊 Active numbers in memory: {len(active_numbers)}")
-            if active_numbers:
-                for num, data in list(active_numbers.items())[:5]:  # প্রথম ৫টি দেখাবে
-                    print(f"  - {num}: user_id={data.get('user_id')}, username={data.get('username')}")
-            
-            if phone in active_numbers:
-                otp_data = active_numbers[phone]
-                token = otp_data['token']
-                username = otp_data['username']
-                message_id = otp_data['message_id']
-                data_user_id = otp_data['user_id']
-                
-                print(f"✅ Phone {phone} found in active_numbers")
-                print(f"   Token exists: {bool(token)}")
-                print(f"   Message ID: {message_id}")
-                print(f"   Data User ID: {data_user_id}")
-                print(f"   Current User ID: {user_id}")
-                
-                # চেক করুন ইউজার সঠিক কিনা
-                if data_user_id == user_id:
-                    if re.match(r'^\d{4,6}$', text):
-                        processing_msg = await update.message.reply_text(f"🔄 Submitting OTP for {phone}...")
-                        
-                        async with aiohttp.ClientSession() as session:
-                            success, message = await submit_otp_async(session, token, phone, text)
-                        
-                        if success:
-                            await processing_msg.delete()
-                            
-                            # OTP সাবমিট সফল হলে status চেক করুন
-                            async with aiohttp.ClientSession() as session:
-                                status_code, status_name, record_id = await get_status_async(session, token, phone)
-                            
-                            try:
-                                await context.bot.edit_message_text(
-                                    chat_id=update.effective_chat.id,
-                                    message_id=message_id,
-                                    text=f"{phone} {status_name}"
-                                )
-                                
-                                # OTP stats update
-                                if status_code == 1:
-                                    otp_stats = load_otp_stats()
-                                    user_id_str = str(user_id)
-                                    
-                                    if user_id_str not in otp_stats["user_stats"]:
-                                        otp_stats["user_stats"][user_id_str] = {
-                                            "total_success": 0,
-                                            "today_success": 0,
-                                            "yesterday_success": 0,
-                                            "username": username,
-                                            "full_name": ""
-                                        }
-                                    
-                                    otp_stats["user_stats"][user_id_str]["total_success"] += 1
-                                    otp_stats["user_stats"][user_id_str]["today_success"] += 1
-                                    otp_stats["today_success"] += 1
-                                    otp_stats["total_success"] += 1
-                                    
-                                    save_otp_stats(otp_stats)
-                                    print(f"✅ OTP success stats updated for user {user_id_str}")
-                                
-                            except BadRequest as e:
-                                print(f"⚠️ Could not update message after OTP: {e}")
-                                await update.message.reply_text(f"✅ OTP submitted successfully for {phone}")
-                        else:
-                            await processing_msg.edit_text(f"❌ OTP submission failed for {phone}: {message}")
-                    else:
-                        await update.message.reply_text("❌ Invalid OTP format. Please send 4-6 digit OTP code.")
-                else:
-                    print(f"❌ User mismatch: data_user_id={data_user_id}, user_id={user_id}")
-                    await update.message.reply_text("❌ This number is not active or doesn't belong to you.")
-            else:
-                print(f"❌ Phone {phone} not found in active_numbers")
-                await update.message.reply_text("❌ This number is not active or doesn't belong to you.")
-        else:
-            await update.message.reply_text("❌ Please reply to a number message with OTP code.")
-    else:
+    if not update.message.reply_to_message:
         await update.message.reply_text("❌ Please reply to a number message with OTP code.")
+        return
+    
+    replied_message = update.message.reply_to_message.text
+    print(f"🔍 Checking OTP submission - User: {user_id}, Text: {text}")
+    print(f"📩 Replied message: {replied_message}")
+    
+    # Extract phone number from replied message
+    phone = None
+    cc = None
+    
+    # Pattern 1: +966 115103194
+    match1 = re.search(r'\+\s*(\d+)\s+(\d+)', replied_message)
+    if match1:
+        cc = match1.group(1)
+        phone = match1.group(2)
+        print(f"📱 Found with CC: CC={cc}, Phone={phone}")
+    
+    # Pattern 2: Just phone number
+    if not phone:
+        match2 = re.search(r'(\d{9,15})', replied_message)
+        if match2:
+            phone = match2.group(1)
+            print(f"📱 Found phone without CC: {phone}")
+    
+    if not phone:
+        await update.message.reply_text("❌ Could not find phone number in replied message!")
+        return
+    
+    print(f"📊 Active numbers in memory: {len(active_numbers)}")
+    if active_numbers:
+        for num, data in list(active_numbers.items())[:5]:
+            print(f"  - {num}: user_id={data.get('user_id')}, cc={data.get('cc')}")
+    
+    # Find data in active_numbers
+    otp_data = active_numbers.get(phone)
+    
+    if not otp_data:
+        # Try to find by phone number in stored data
+        for num, data in active_numbers.items():
+            if data.get('phone') == phone:
+                otp_data = data
+                print(f"✅ Phone found with key: {num}")
+                break
+    
+    if not otp_data:
+        print(f"❌ Phone {phone} not found in active_numbers")
+        await update.message.reply_text("❌ This number is not active or doesn't belong to you.")
+        return
+    
+    token = otp_data['token']
+    username = otp_data['username']
+    message_id = otp_data['message_id']
+    data_user_id = otp_data['user_id']
+    data_cc = otp_data.get('cc', cc if cc else '1')
+    
+    print(f"   Token exists: {bool(token)}")
+    print(f"   Message ID: {message_id}")
+    print(f"   Data User ID: {data_user_id}")
+    print(f"   Current User ID: {user_id}")
+    print(f"   CC: {data_cc}")
+    
+    # Check if user matches
+    if data_user_id != user_id:
+        print(f"❌ User mismatch: data_user_id={data_user_id}, user_id={user_id}")
+        await update.message.reply_text("❌ This number doesn't belong to you!")
+        return
+    
+    # Validate OTP format based on country
+    if data_cc == '1' or data_cc == '11':  # USA/Canada
+        if not re.match(r'^\d{6}$', text):
+            await update.message.reply_text("❌ USA/Canada requires 6-digit OTP!")
+            return
+    elif data_cc in ['44', '61', '64']:  # UK, Australia, New Zealand
+        if not re.match(r'^\d{6}$', text):
+            await update.message.reply_text("❌ This country requires 6-digit OTP!")
+            return
+    else:  # Other countries (Bangladesh, India, Saudi, etc)
+        if not re.match(r'^\d{4,6}$', text):
+            await update.message.reply_text("❌ Invalid OTP format. Please send 4-6 digit OTP code.")
+            return
+    
+    processing_msg = await update.message.reply_text(f"🔄 Submitting OTP for {phone} (CC: {data_cc})...")
+    
+    # Submit OTP
+    async with aiohttp.ClientSession() as session:
+        success, message = await submit_otp_async(session, token, phone, text, data_cc)
+    
+    if success:
+        await processing_msg.delete()
+        
+        # Check status after OTP submission
+        async with aiohttp.ClientSession() as session:
+            status_code, status_name, record_id = await get_status_async(session, token, phone)
+        
+        # Update the original message
+        final_text = f"+{data_cc} {phone} {status_name}"
+        
+        try:
+            await context.bot.edit_message_text(
+                chat_id=update.effective_chat.id,
+                message_id=message_id,
+                text=final_text
+            )
+            print(f"✅ Message updated to: {final_text}")
+        except BadRequest as e:
+            print(f"⚠️ Could not update message: {e}")
+            
+        # Remove from active_numbers
+        if phone in active_numbers:
+            del active_numbers[phone]
+            print(f"🗑️ Removed {phone} from active_numbers")
+        
+        # Update OTP stats on success
+        if status_code == 1:
+            otp_stats = load_otp_stats()
+            user_id_str = str(user_id)
+            
+            if user_id_str not in otp_stats["user_stats"]:
+                otp_stats["user_stats"][user_id_str] = {
+                    "total_success": 0,
+                    "today_success": 0,
+                    "yesterday_success": 0,
+                    "username": username,
+                    "full_name": ""
+                }
+            
+            otp_stats["user_stats"][user_id_str]["total_success"] += 1
+            otp_stats["user_stats"][user_id_str]["today_success"] += 1
+            otp_stats["total_success"] = otp_stats.get("total_success", 0) + 1
+            otp_stats["today_success"] = otp_stats.get("today_success", 0) + 1
+            
+            save_otp_stats(otp_stats)
+            print(f"✅ OTP success stats updated for user {user_id_str}")
+            
+    else:
+        await processing_msg.edit_text(f"❌ OTP submission failed for {phone}: {message}")
 
 async def track_status_optimized(context: CallbackContext):
     data = context.job.data
@@ -2116,46 +2734,34 @@ async def track_status_optimized(context: CallbackContext):
         prefix = f"{serial_number}. " if serial_number else ""
         display_phone = actual_phone if actual_phone and actual_phone != phone else phone
         
-        # ============ DEBUG INFO ============
-        print(f"🔍 Checking {phone}: Status={status_code}, Record_ID={record_id}")
-        # ====================================
-        
-        # ============ IMPORTANT FIX ============
-        # সব স্ট্যাটাসের জন্য ইউনিফাইড লজিক
-        if status_code is not None and status_code not in [1, 2]:
-            # স্ট্যাটাস ১ (সাকসেস) এবং ২ (ইন প্রোগ্রেস) ছাড়া বাকি সব ডিলিট হবে
-            print(f"🛑 FINAL STATE for {phone}: Status {status_code} - DELETING...")
-            
-            # টোকেন রিলিজ (কিন্তু শুধুমাত্র সাকসেস না হলে)
+        # Token expired check
+        if status_code == -1:
             account_manager.release_token(token)
-            
-            # active_numbers থেকে রিমুভ
+            error_text = f"{prefix}+{cc} {display_phone} ❌ Token Error (Auto-Retry)"
+            try:
+                await context.bot.edit_message_text(
+                    chat_id=data['chat_id'], 
+                    message_id=data['message_id'],
+                    text=error_text
+                )
+            except BadRequest as e:
+                if "Message is not modified" not in str(e):
+                    print(f"❌ Message update failed for {phone}: {e}")
+            return
+        
+        # Final states - stop tracking
+        final_states = [0, 1, 4, 7, 6, 8, 9, 10, 11, 12, 13, 14, 15, 16, -2]
+        
+        if status_code in final_states:
+            account_manager.release_token(token)
             if phone in active_numbers:
                 del active_numbers[phone]
-                print(f"🗑️ Removed from active_numbers")
+                print(f"🗑️ Number {phone} removed from active_numbers (final state: {status_code})")
             
-            # ডিলিট প্রসেস শুরু
-            print(f"🔴 Starting deletion process...")
+            if status_code not in [1, 2]:
+                deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
             
-            # ১. API থেকে রেকর্ড আইডি দিয়ে ডিলিট
-            if record_id:
-                print(f"📝 Deleting from API with record_id: {record_id}")
-                async with aiohttp.ClientSession() as session:
-                    api_deleted = await delete_single_number_async(session, token, record_id, username)
-                    if api_deleted:
-                        print(f"✅ API deletion successful")
-                    else:
-                        print(f"❌ API deletion failed, trying alternative")
-            
-            # ২. ইউজারের সব অ্যাকাউন্ট থেকে ডিলিট
-            print(f"🔄 Deleting from all user accounts")
-            deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
-            print(f"✅ Deleted from {deleted_count} user accounts")
-            
-            # ফাইনাল মেসেজ
             final_text = f"{prefix}+{cc} {display_phone} {status_name}"
-            if actual_phone and actual_phone != phone:
-                final_text += f""
             
             try:
                 await context.bot.edit_message_text(
@@ -2163,26 +2769,15 @@ async def track_status_optimized(context: CallbackContext):
                     message_id=data['message_id'],
                     text=final_text
                 )
-                print(f"📨 Message updated successfully")
             except BadRequest as e:
                 if "Message is not modified" not in str(e):
-                    print(f"⚠️ Message update error: {e}")
-            
-            return  # 🛑 ট্র্যাকিং বন্ধ
+                    print(f"❌ Final message update failed for {phone}: {e}")
+            return
         
-        # ============ সাকসেস হ্যান্ডলিং ============
+        # Success handling
         if status_code == 1 and last_status_code != 1:
-            print(f"🎉 SUCCESS for {phone}")
+            print(f"🎉 SUCCESS detected for {phone} by user {user_id}")
             
-            # টোকেন রিলিজ কিন্তু কাউন্ট রাখা
-            account_manager.release_token(token)
-            
-            # active_numbers থেকে রিমুভ
-            if phone in active_numbers:
-                del active_numbers[phone]
-                print(f"🗑️ Removed from active_numbers (SUCCESS)")
-            
-            # স্ট্যাটিস্টিক্স আপডেট
             tracking = load_tracking()
             user_id_str = str(user_id)
             
@@ -2213,23 +2808,9 @@ async def track_status_optimized(context: CallbackContext):
                 
                 save_otp_stats(otp_stats)
                 save_tracking(tracking)
-                print(f"✅ Success stats updated")
-            
-            # সাকসেস মেসেজ
-            final_text = f"{prefix}+{cc} {display_phone} {status_name}"
-            try:
-                await context.bot.edit_message_text(
-                    chat_id=data['chat_id'], 
-                    message_id=data['message_id'],
-                    text=final_text
-                )
-            except BadRequest as e:
-                if "Message is not modified" not in str(e):
-                    print(f"⚠️ Success message update error: {e}")
-            
-            return  # 🛑 ট্র্যাকিং বন্ধ
+                print(f"✅ Success count updated for user {user_id_str}")
         
-        # ============ ইন প্রোগ্রেস হ্যান্ডলিং ============
+        # In Progress handling - store in active_numbers
         if status_code == 2:
             if phone not in active_numbers:
                 active_numbers[phone] = {
@@ -2237,15 +2818,18 @@ async def track_status_optimized(context: CallbackContext):
                     'username': username,
                     'message_id': data['message_id'],
                     'user_id': user_id,
-                    'chat_id': data['chat_id']
+                    'chat_id': data['chat_id'],
+                    'cc': cc,
+                    'phone': phone
                 }
-                print(f"✅ Added to active_numbers for OTP")
+                print(f"✅ Number {phone} added to active_numbers for OTP submission")
+                print(f"📱 Active numbers count: {len(active_numbers)}")
+            else:
+                print(f"ℹ️ Number {phone} already in active_numbers")
         
-        # ============ স্ট্যাটাস আপডেট ============
+        # Update message if status changed
         if status_name != last_status:
             new_text = f"{prefix}+{cc} {display_phone} {status_name}"
-            if actual_phone and actual_phone != phone:
-                new_text += f""
             
             try:
                 await context.bot.edit_message_text(
@@ -2255,28 +2839,19 @@ async def track_status_optimized(context: CallbackContext):
                 )
             except BadRequest as e:
                 if "Message is not modified" not in str(e):
-                    print(f"⚠️ Status update error: {e}")
+                    print(f"❌ Message update failed for {phone}: {e}")
         
-        # ============ টাইমআউট চেক ============
+        # Timeout check
         if checks >= 100:
-            print(f"⏰ TIMEOUT for {phone} after {checks} checks")
             account_manager.release_token(token)
-            
             if phone in active_numbers:
                 del active_numbers[phone]
-                print(f"🗑️ Removed from active_numbers (timeout)")
+                print(f"⏰ Number {phone} removed from active_numbers (timeout)")
             
-            # টাইমআউট হলে ডিলিট করুন
             if status_code not in [1, 2]:
-                print(f"🔴 Timeout - deleting {phone}")
-                if record_id:
-                    async with aiohttp.ClientSession() as session:
-                        await delete_single_number_async(session, token, record_id, username)
-                await delete_number_from_all_accounts_optimized(phone, user_id)
+                deleted_count = await delete_number_from_all_accounts_optimized(phone, user_id)
             
             timeout_text = f"{prefix}+{cc} {display_phone} 🟡 Try Later"
-            if actual_phone and actual_phone != phone:
-                timeout_text += f""
             
             try:
                 await context.bot.edit_message_text(
@@ -2286,15 +2861,14 @@ async def track_status_optimized(context: CallbackContext):
                 )
             except BadRequest as e:
                 if "Message is not modified" not in str(e):
-                    print(f"❌ Timeout message update error: {e}")
-            
+                    print(f"❌ Timeout message update failed for {phone}: {e}")
             return
         
-        # ============ পরবর্তী চেক শিডিউল ============
+        # Schedule next check
         if context.job_queue:
             context.job_queue.run_once(
                 track_status_optimized, 
-                2,
+                5,  # Increased from 2 to 5 seconds
                 data={
                     **data, 
                     'checks': checks + 1, 
@@ -2304,7 +2878,7 @@ async def track_status_optimized(context: CallbackContext):
                 }
             )
         else:
-            print("❌ JobQueue unavailable")
+            print("❌ JobQueue not available")
             
     except Exception as e:
         print(f"❌ Tracking error for {phone}: {e}")
@@ -2584,7 +3158,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 # If date parsing fails, treat it as part of country rates
                 args.append(date_str)
         
-        # Parse country rates - FIXED VERSION (remove comma from country names)
+        # Parse country rates
         i = 0
         default_rate = None
         
@@ -2675,6 +3249,10 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         users_in_friends_lists = set()
         
         print(f"🔍 Total users in accounts: {len(accounts)}")
+        print(f"📊 Settlement Rate Configuration:")
+        print(f"  • Default rate: {default_rate}")
+        print(f"  • Country rates: {country_rates}")
+        print(f"  • Target date: {target_date}")
         
         # First pass: Find all users in friends lists
         for user_id_str, user_data in accounts.items():
@@ -2731,237 +3309,264 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 except:
                     pass
             
-            user_token = None
-            token_refreshed = False
+            # ============ IMPORTANT CHANGE: Process ALL accounts for user ============
+            user_total_count = 0
+            user_total_usd = 0
+            user_country_totals = {}
+            user_accounts_with_settlements = []
+            user_all_filtered_settlements = []
             
-            if user_id_str in account_manager.user_tokens and account_manager.user_tokens[user_id_str]:
-                user_token = account_manager.user_tokens[user_id_str][0]
+            # Process each account separately
+            for acc_idx, account in enumerate(user_accounts):
+                print(f"\n📊 Processing account {acc_idx + 1}/{len(user_accounts)} for user {username}")
                 
-                async with aiohttp.ClientSession() as session:
-                    status_code, _, _ = await get_status_async(session, user_token, "0000000000")
+                account_name = account.get('custom_name', account['username'])
+                account_username = account['username']
+                account_password = account['password']
                 
-                if status_code == -1:
-                    user_token = None
-            
-            if not user_token:
-                for acc in user_accounts:
-                    if not acc.get('active', True):
-                        continue
-                    
-                    token, api_user_id, nickname = await login_api_async(acc['username'], acc['password'])
+                # Login to this specific account
+                account_token = None
+                account_api_user_id = None
+                
+                # Try existing token first
+                if account.get('token'):
+                    async with aiohttp.ClientSession() as session:
+                        status_code, _, _ = await get_status_async(session, account['token'], "0000000000")
+                    if status_code != -1:
+                        account_token = account['token']
+                        account_api_user_id = account.get('api_user_id')
+                        print(f"✅ Using existing token for account {account_name}")
+                
+                # If no valid token, login fresh
+                if not account_token:
+                    print(f"🔄 Logging into account {account_name}")
+                    token, api_user_id, nickname = await login_api_async(account_username, account_password)
                     if token:
-                        acc['token'] = token
-                        acc['api_user_id'] = api_user_id
-                        acc['nickname'] = nickname
-                        acc['last_login'] = datetime.now().isoformat()
+                        account_token = token
+                        account_api_user_id = api_user_id
                         
-                        user_token = token
-                        token_refreshed = True
+                        # Update account in database
+                        account['token'] = token
+                        account['api_user_id'] = api_user_id
+                        account['nickname'] = nickname
+                        account['last_login'] = datetime.now().isoformat()
+                        
                         users_token_refreshed += 1
-                        break
-            
-            if not user_token:
-                users_failed += 1
-                continue
-            
-            save_accounts(accounts)
-            
-            api_user_id = None
-            for acc in user_accounts:
-                if acc.get('token') == user_token:
-                    api_user_id = acc.get('api_user_id')
-                    break
-            
-            if not api_user_id:
-                users_failed += 1
-                continue
-            
-            try:
-                print(f"\n📊 Processing user: {username} (ID: {user_id_str})")
+                        print(f"✅ Login successful for account {account_name}")
+                    else:
+                        print(f"❌ Login failed for account {account_name}")
+                        continue
                 
-                # ১. ইউজারের নিজের settlement চেক করা
-                user_filtered_settlements = []
-                country_totals = {}
-                total_count = 0
-                total_usd_user = 0
-                
-                async with aiohttp.ClientSession() as session:
-                    settlement_data, error = await get_user_settlements(session, user_token, str(api_user_id), page=1, page_size=100)
-                
-                if not error and settlement_data and settlement_data.get('records'):
-                    for record in settlement_data.get('records', []):
-                        gmt_create = record.get('gmtCreate')
-                        if not gmt_create:
+                # Get settlements for this account
+                if account_token and account_api_user_id:
+                    try:
+                        async with aiohttp.ClientSession() as session:
+                            settlement_data, error = await get_user_settlements(
+                                session, account_token, str(account_api_user_id), page=1, page_size=100
+                            )
+                        
+                        if error:
+                            print(f"❌ Error fetching settlements for account {account_name}: {error}")
                             continue
                         
-                        try:
-                            if 'T' in gmt_create:
-                                record_date = datetime.fromisoformat(gmt_create.replace('Z', '+00:00')).date()
-                            else:
-                                record_date = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S').date()
-                            
-                            if record_date != target_date:
-                                continue
-                            
-                            country = record.get('countryName') or record.get('country') or 'Unknown'
-                            # Clean country name
-                            country = country.strip(', ')
-                            
-                            # Check if this country is included in our rates
-                            if country_rates:
-                                country_matched = False
-                                matched_country = None
-                                
-                                for target_country in country_rates.keys():
-                                    if target_country.lower() in country.lower() or country.lower() in target_country.lower():
-                                        country_matched = True
-                                        matched_country = target_country
-                                        break
-                                
-                                if not country_matched:
+                        account_filtered_settlements = []
+                        account_country_totals = {}
+                        
+                        if settlement_data and settlement_data.get('records'):
+                            for record in settlement_data.get('records', []):
+                                gmt_create = record.get('gmtCreate')
+                                if not gmt_create:
                                     continue
-                            # If no country rates specified, use default rate
-                            elif not default_rate:
-                                continue
+                                
+                                try:
+                                    if 'T' in gmt_create:
+                                        record_date = datetime.fromisoformat(gmt_create.replace('Z', '+00:00')).date()
+                                    else:
+                                        record_date = datetime.strptime(gmt_create, '%Y-%m-%d %H:%M:%S').date()
+                                    
+                                    if record_date != target_date:
+                                        continue
+                                    
+                                    country = record.get('countryName') or record.get('country') or 'Unknown'
+                                    # Clean country name
+                                    country = country.strip(', ')
+                                    
+                                    # Check if this country is included in our rates
+                                    if country_rates:
+                                        country_matched = False
+                                        matched_country = None
+                                        matched_rate = default_rate if default_rate else 0.10
+                                        
+                                        for target_country, target_rate in country_rates.items():
+                                            if target_country.lower() in country.lower() or country.lower() in target_country.lower():
+                                                country_matched = True
+                                                matched_country = target_country
+                                                matched_rate = target_rate
+                                                break
+                                        
+                                        if not country_matched:
+                                            continue
+                                    # If no country rates specified, use default rate
+                                    else:
+                                        if not default_rate:
+                                            continue
+                                        matched_rate = default_rate
+                                    
+                                    count_value = record.get('count', 0)
+                                    account_filtered_settlements.append({
+                                        'record': record,
+                                        'date': record_date,
+                                        'country': country,
+                                        'count': count_value,
+                                        'account_name': account_name,
+                                        'rate': matched_rate  # Store the rate used
+                                    })
+                                    
+                                except Exception as e:
+                                    print(f"❌ Error processing record: {e}")
+                                    continue
+                        
+                        if account_filtered_settlements:
+                            print(f"✅ Account {account_name} has {len(account_filtered_settlements)} settlements")
                             
-                            count_value = record.get('count', 0)
-                            user_filtered_settlements.append({
-                                'record': record,
-                                'date': record_date,
-                                'country': country,
-                                'count': count_value
+                            # Calculate account totals with correct rate
+                            for item in account_filtered_settlements:
+                                country = item['country']
+                                count = item['count']
+                                item_rate = item['rate']
+                                
+                                # Add to user totals
+                                if country not in user_country_totals:
+                                    user_country_totals[country] = {
+                                        'count': 0,
+                                        'rate': item_rate
+                                    }
+                                user_country_totals[country]['count'] += count
+                                
+                                user_total_count += count
+                                user_total_usd += count * item_rate  # Use the correct rate
+                                user_all_filtered_settlements.append(item)
+                            
+                            user_accounts_with_settlements.append({
+                                'account_name': account_name,
+                                'username': account_username,
+                                'settlement_count': len(account_filtered_settlements),
+                                'total_count': sum(item['count'] for item in account_filtered_settlements),
+                                'total_usd': sum(item['count'] * item['rate'] for item in account_filtered_settlements)
                             })
                             
-                        except Exception as e:
-                            print(f"❌ Error processing record: {e}")
-                            continue
+                    except Exception as e:
+                        print(f"❌ Error processing account {account_name}: {type(e).__name__}: {e}")
+                        continue
+            
+            # Calculate user's personal USD from all accounts (already calculated in loop)
+            user_personal_usd = user_total_usd
+            
+            total_personal_count += user_total_count
+            
+            # Debug output for rate calculation
+            print(f"💰 Rate calculation for {username}:")
+            print(f"  • Total count: {user_total_count}")
+            print(f"  • Total USD: ${user_personal_usd:.2f}")
+            if user_total_count > 0:
+                effective_rate = user_personal_usd / user_total_count
+                print(f"  • Effective rate: ${effective_rate:.3f}/count")
+            
+            # ২. ফ্রেন্ডদের কমিশন যোগ করা (একই আগের লজিক)
+            commission_rate = 0.002
+            total_commission = 0
+            friends_details = []
+            
+            # ফ্রেন্ড ডেটা চেক করা (প্রথম অ্যাকাউন্ট থেকে নেওয়া)
+            friends_list = []
+            for acc in user_accounts:
+                if isinstance(acc, dict) and 'friends' in acc and isinstance(acc['friends'], list):
+                    friends_list = acc['friends']
+                    print(f"👥 Found {len(friends_list)} friends for {username}")
+                    break
+            
+            total_friends_count += len(friends_list)
+            
+            # প্রতিটি ফ্রেন্ডের জন্য কমিশন ক্যালকুলেশন
+            for friend_data in friends_list:
+                friend_user_id = None
                 
-                if user_filtered_settlements:
-                    users_with_settlements += 1
-                    
-                    for item in user_filtered_settlements:
-                        country = item['country']
-                        if country not in country_totals:
-                            country_totals[country] = 0
-                        country_totals[country] += item['count']
-                    
-                    total_count = sum(country_totals.values())
-                    
-                    # Calculate earnings based on country rates
-                    for country, count in country_totals.items():
-                        if country_rates:
-                            # Find matching country rate
-                            rate = default_rate
-                            for target_country, target_rate in country_rates.items():
-                                if target_country.lower() in country.lower() or country.lower() in target_country.lower():
-                                    rate = target_rate
-                                    break
-                        else:
-                            rate = default_rate
-                        
-                        total_usd_user += count * rate
-                    
-                    total_personal_count += total_count
-                    print(f"✅ User has settlements: {total_count} counts = ${total_usd_user:.2f}")
-                    print(f"  Country breakdown: {country_totals}")
+                if isinstance(friend_data, dict) and 'user_id' in friend_data:
+                    friend_user_id = str(friend_data['user_id'])
+                elif isinstance(friend_data, str):
+                    friend_user_id = str(friend_data)
                 else:
-                    print(f"⚠️ User {username} has no settlements on {target_date}")
+                    continue
                 
-                # ২. ফ্রেন্ডদের কমিশন যোগ করা
-                commission_rate = 0.002
-                total_commission = 0
-                friends_details = []
+                print(f"🔍 Processing friend: {friend_user_id}")
                 
-                # ফ্রেন্ড ডেটা চেক করা
-                friends_list = []
-                for acc in user_accounts:
-                    if isinstance(acc, dict) and 'friends' in acc and isinstance(acc['friends'], list):
-                        friends_list = acc['friends']
-                        print(f"👥 Found {len(friends_list)} friends for {username}")
+                friend_found = False
+                actual_friend_id = None
+                
+                for acc_key in accounts.keys():
+                    if str(acc_key) == str(friend_user_id):
+                        actual_friend_id = acc_key
+                        friend_found = True
                         break
                 
-                total_friends_count += len(friends_list)
+                if not friend_found:
+                    print(f"❌ Friend {friend_user_id} not found in accounts")
+                    continue
                 
-                # প্রতিটি ফ্রেন্ডের জন্য কমিশন ক্যালকুলেশন
-                for friend_data in friends_list:
-                    friend_user_id = None
-                    
-                    if isinstance(friend_data, dict) and 'user_id' in friend_data:
-                        friend_user_id = str(friend_data['user_id'])
-                    elif isinstance(friend_data, str):
-                        friend_user_id = str(friend_data)
-                    else:
+                if actual_friend_id and actual_friend_id in accounts:
+                    friend_accounts_data = accounts[actual_friend_id]
+                    if not isinstance(friend_accounts_data, dict):
                         continue
-                    
-                    print(f"🔍 Processing friend: {friend_user_id}")
-                    
-                    friend_found = False
-                    actual_friend_id = None
-                    
-                    for acc_key in accounts.keys():
-                        if str(acc_key) == str(friend_user_id):
-                            actual_friend_id = acc_key
-                            friend_found = True
-                            break
-                    
-                    if not friend_found:
-                        print(f"❌ Friend {friend_user_id} not found in accounts")
+                        
+                    friend_accounts = friend_accounts_data.get("accounts", [])
+                    if not friend_accounts:
                         continue
+                        
+                    friend_api_id = friend_accounts[0].get('api_user_id') if friend_accounts else None
+                    friend_username = friend_accounts[0].get('username', 'Unknown') if friend_accounts else 'Unknown'
+                    friend_telegram_username = friend_accounts[0].get('telegram_username', '') if friend_accounts else ''
                     
-                    if actual_friend_id and actual_friend_id in accounts:
-                        friend_accounts_data = accounts[actual_friend_id]
-                        if not isinstance(friend_accounts_data, dict):
-                            continue
-                            
-                        friend_accounts = friend_accounts_data.get("accounts", [])
-                        if not friend_accounts:
-                            continue
-                            
-                        friend_api_id = friend_accounts[0].get('api_user_id') if friend_accounts else None
-                        friend_username = friend_accounts[0].get('username', 'Unknown') if friend_accounts else 'Unknown'
-                        friend_telegram_username = friend_accounts[0].get('telegram_username', '') if friend_accounts else ''
+                    # ফ্রেন্ডের জন্য supervisor হিসেবে বর্তমান ইউজারকে সেট করা
+                    user_under_supervisors[actual_friend_id] = {
+                        'name': username,
+                        'telegram_username': telegram_username,
+                        'user_id': user_id_str
+                    }
+                    
+                    print(f"✅ Processing friend: {friend_username} (API: {friend_api_id})")
+                    
+                    # ফ্রেন্ডের settlement ডেটা fetch করা (ফ্রেন্ডের সব অ্যাকাউন্ট থেকে)
+                    friend_total_count = 0
+                    friend_total_usd = 0
+                    friend_countries = []
+                    
+                    # Process friend's all accounts
+                    for friend_acc in friend_accounts:
+                        friend_acc_token = None
+                        friend_acc_api_id = friend_acc.get('api_user_id')
                         
-                        # ফ্রেন্ডের জন্য supervisor হিসেবে বর্তমান ইউজারকে সেট করা
-                        user_under_supervisors[actual_friend_id] = {
-                            'name': username,
-                            'telegram_username': telegram_username,
-                            'user_id': user_id_str
-                        }
+                        if friend_acc.get('token'):
+                            async with aiohttp.ClientSession() as token_session:
+                                status_code, _, _ = await get_status_async(token_session, friend_acc['token'], "0000000000")
+                            if status_code != -1:
+                                friend_acc_token = friend_acc['token']
                         
-                        print(f"✅ Processing friend: {friend_username} (API: {friend_api_id})")
+                        if not friend_acc_token:
+                            if friend_acc.get('active', True):
+                                token, api_id, nickname = await login_api_async(friend_acc['username'], friend_acc['password'])
+                                if token:
+                                    friend_acc_token = token
+                                    friend_acc['token'] = token
+                                    if api_id:
+                                        friend_acc['api_user_id'] = api_id
+                                    friend_acc['nickname'] = nickname
+                                    friend_acc['last_login'] = datetime.now().isoformat()
                         
-                        # ফ্রেন্ডের settlement ডেটা fetch করা
-                        friend_token = None
-                        
-                        try:
-                            for acc in friend_accounts:
-                                if acc.get('token'):
-                                    async with aiohttp.ClientSession() as token_session:
-                                        status_code, _, _ = await get_status_async(token_session, acc['token'], "0000000000")
-                                    if status_code != -1:
-                                        friend_token = acc['token']
-                                        break
-                        except:
-                            pass
-                        
-                        if not friend_token:
-                            for acc in friend_accounts:
-                                if acc.get('active', True):
-                                    token, api_id, nickname = await login_api_async(acc['username'], acc['password'])
-                                    if token:
-                                        friend_token = token
-                                        acc['token'] = token
-                                        if api_id:
-                                            acc['api_user_id'] = api_id
-                                        acc['nickname'] = nickname
-                                        acc['last_login'] = datetime.now().isoformat()
-                                        break
-                        
-                        if friend_token and friend_api_id:
+                        if friend_acc_token and friend_acc_api_id:
                             try:
                                 async with aiohttp.ClientSession() as friend_session:
                                     friend_settlement_data, error = await get_user_settlements(
-                                        friend_session, friend_token, str(friend_api_id), page=1, page_size=100
+                                        friend_session, friend_acc_token, str(friend_acc_api_id), page=1, page_size=100
                                     )
                                     
                                     if error:
@@ -2969,10 +3574,6 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                                         continue
                                     
                                     if friend_settlement_data and friend_settlement_data.get('records'):
-                                        friend_filtered_count = 0
-                                        friend_countries = []
-                                        friend_earnings = 0
-                                        
                                         for record in friend_settlement_data.get('records', []):
                                             gmt_create = record.get('gmtCreate')
                                             if not gmt_create:
@@ -2991,127 +3592,120 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                                                 # Clean country name
                                                 country = country.strip(', ')
                                                 
-                                                # Check country filter
+                                                # Check country filter and get rate
+                                                item_rate = default_rate if default_rate else 0.10
                                                 if country_rates:
                                                     country_matched = False
-                                                    matched_country = None
-                                                    
-                                                    for target_country in country_rates.keys():
+                                                    for target_country, target_rate in country_rates.items():
                                                         if target_country.lower() in country.lower() or country.lower() in target_country.lower():
                                                             country_matched = True
-                                                            matched_country = target_country
+                                                            item_rate = target_rate
                                                             break
                                                     
                                                     if not country_matched:
                                                         continue
-                                                # If no country rates specified, use default rate
-                                                elif not default_rate:
-                                                    continue
                                                 
                                                 count = record.get('count', 0)
-                                                friend_filtered_count += count
-                                                
-                                                # Calculate earnings based on country rates
-                                                if country_rates:
-                                                    # Find matching country rate
-                                                    rate = default_rate
-                                                    for target_country, target_rate in country_rates.items():
-                                                        if target_country.lower() in country.lower() or country.lower() in target_country.lower():
-                                                            rate = target_rate
-                                                            break
-                                                else:
-                                                    rate = default_rate
-                                                
-                                                friend_earnings += count * rate
+                                                friend_total_count += count
+                                                friend_total_usd += count * item_rate
                                                 
                                                 if country not in friend_countries:
                                                     friend_countries.append(country)
                                                     
                                             except Exception as e:
                                                 continue
-                                        
-                                        print(f"📈 Friend {friend_username} filtered count for target countries: {friend_filtered_count}")
-                                        
-                                        if friend_filtered_count >= 10:
-                                            friend_commission = friend_filtered_count * commission_rate
-                                            total_commission += friend_commission
-                                            total_friend_counts += friend_filtered_count
-                                            total_eligible_friends += 1
-                                            
-                                            friend_name = "Unknown"
-                                            if isinstance(friend_data, dict) and 'name' in friend_data:
-                                                friend_name = friend_data['name']
-                                            elif friend_accounts and friend_accounts[0].get('nickname'):
-                                                friend_name = friend_accounts[0].get('nickname')
-                                            elif friend_accounts and friend_accounts[0].get('username'):
-                                                friend_name = friend_accounts[0].get('username')
-                                            
-                                            friends_details.append({
-                                                'name': friend_name,
-                                                'username': friend_username,
-                                                'telegram_username': friend_telegram_username,
-                                                'accounts': len(friend_accounts),
-                                                'counts': friend_filtered_count,
-                                                'commission': friend_commission,
-                                                'countries': friend_countries,
-                                                'earnings': friend_earnings,
-                                                'friend_user_id': actual_friend_id
-                                            })
-                                            
-                                            print(f"✅ Friend commission added: {friend_name} - ${friend_commission:.2f} from {friend_filtered_count} counts")
-                                        else:
-                                            print(f"⚠️ Friend {friend_username} has only {friend_filtered_count} counts in target countries (needs 10)")
-                                    else:
-                                        print(f"⚠️ No settlement records found for friend {friend_username}")
                             except Exception as e:
                                 print(f"❌ Friend calculation error: {type(e).__name__}: {e}")
                                 continue
-                
-                # ৩. টোটাল ক্যালকুলেশন করা
-                total_usd_with_commission = total_usd_user + total_commission
-                total_bdt_user = total_usd_with_commission * USD_TO_BDT
-                
-                print(f"💰 Final calculation for {username}:")
-                print(f"  Personal: ${total_usd_user:.2f}")
-                print(f"  Commission: ${total_commission:.2f}")
-                print(f"  Total USD: ${total_usd_with_commission:.2f}")
-                print(f"  Total BDT: {total_bdt_user:.2f}")
-                
-                if total_commission > 0 and total_count == 0:
-                    users_with_only_commission += 1
-                    print(f"👥 User {username} has only commission: ${total_commission:.2f}")
-                
-                # Check if user has any earnings
-                has_earnings = total_usd_user > 0 or total_commission > 0
-                
-                if has_earnings:
-                    users_with_earnings += 1
+                    
+                    print(f"📈 Friend {friend_username} total filtered count: {friend_total_count}, USD: ${friend_total_usd:.2f}")
+                    
+                    if friend_total_count >= 1:
+                        friend_commission = friend_total_count * commission_rate
+                        total_commission += friend_commission
+                        total_friend_counts += friend_total_count
+                        total_eligible_friends += 1
+                        
+                        friend_name = "Unknown"
+                        if isinstance(friend_data, dict) and 'name' in friend_data:
+                            friend_name = friend_data['name']
+                        elif friend_accounts and friend_accounts[0].get('nickname'):
+                            friend_name = friend_accounts[0].get('nickname')
+                        elif friend_accounts and friend_accounts[0].get('username'):
+                            friend_name = friend_accounts[0].get('username')
+                        
+                        friends_details.append({
+                            'name': friend_name,
+                            'username': friend_username,
+                            'telegram_username': friend_telegram_username,
+                            'accounts': len(friend_accounts),
+                            'counts': friend_total_count,
+                            'commission': friend_commission,
+                            'countries': friend_countries,
+                            'earnings': friend_total_usd,  # Friend's actual earnings
+                            'friend_user_id': actual_friend_id
+                        })
+                        
+                        print(f"✅ Friend commission added: {friend_name} - ${friend_commission:.2f} from {friend_total_count} counts")
+                    else:
+                        print(f"⚠️ Friend {friend_username} has only {friend_total_count} counts in target countries")
                 else:
-                    users_without_earnings += 1
-                    print(f"ℹ️ User {username} has no earnings, skipping from report")
-                    continue
+                    print(f"⚠️ No settlement records found for friend {friend_username}")
+            
+            # ৩. টোটাল ক্যালকুলেশন করা
+            total_usd_with_commission = user_personal_usd + total_commission
+            total_bdt_user = total_usd_with_commission * USD_TO_BDT
+            
+            print(f"💰 Final calculation for {username} (ALL ACCOUNTS):")
+            print(f"  Accounts with settlements: {len(user_accounts_with_settlements)}")
+            print(f"  Personal counts: {user_total_count}")
+            print(f"  Personal USD: ${user_personal_usd:.2f}")
+            print(f"  Commission: ${total_commission:.2f}")
+            print(f"  Total USD: ${total_usd_with_commission:.2f}")
+            print(f"  Total BDT: {total_bdt_user:.2f}")
+            
+            if user_total_count > 0:
+                users_with_settlements += 1
+            
+            if total_commission > 0 and user_total_count == 0:
+                users_with_only_commission += 1
+                print(f"👥 User {username} has only commission: ${total_commission:.2f}")
+            
+            # Check if user has any earnings
+            has_earnings = user_personal_usd > 0 or total_commission > 0
+            
+            if has_earnings:
+                users_with_earnings += 1
+                
+                # Convert country_totals to the expected format
+                simplified_country_totals = {}
+                for country, data in user_country_totals.items():
+                    simplified_country_totals[country] = data['count']
                 
                 user_summary = {
                     'user_id': user_id_str,
                     'username': username,
                     'telegram_username': telegram_username,
-                    'api_user_id': api_user_id,
                     'settlement_date': target_date_display,
-                    'countries': list(country_totals.keys()),
-                    'country_totals': country_totals,
-                    'total_count': total_count,
-                    'personal_usd': total_usd_user,
+                    'countries': list(simplified_country_totals.keys()),
+                    'country_totals': simplified_country_totals,
+                    'total_count': user_total_count,
+                    'personal_usd': user_personal_usd,
                     'total_commission': total_commission,
                     'friends_details': friends_details,
                     'total_usd': total_usd_with_commission,
                     'total_bdt': total_bdt_user,
-                    'num_records': len(user_filtered_settlements),
-                    'token_refreshed': token_refreshed,
-                    'has_personal_settlement': len(user_filtered_settlements) > 0,
+                    'num_records': len(user_all_filtered_settlements),
+                    'token_refreshed': users_token_refreshed,
+                    'has_personal_settlement': len(user_all_filtered_settlements) > 0,
                     'friend_counts': sum(f['counts'] for f in friends_details),
-                    'total_counts': total_count + sum(f['counts'] for f in friends_details),
+                    'total_counts': user_total_count + sum(f['counts'] for f in friends_details),
                     'has_earnings': has_earnings,
-                    'in_friends_list': user_id_str in users_in_friends_lists
+                    'in_friends_list': user_id_str in users_in_friends_lists,
+                    'friends_list': friends_details,
+                    'accounts_with_settlements': user_accounts_with_settlements,
+                    'total_accounts': len(user_accounts),
+                    'active_accounts': len([acc for acc in user_accounts if acc.get('active', True)])
                 }
                 
                 all_users_summary.append(user_summary)
@@ -3119,20 +3713,24 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 total_usd += total_usd_with_commission
                 total_bdt += total_bdt_user
                 
-                print(f"✅ User {username} added to summary")
+                print(f"✅ User {username} added to summary (from {len(user_accounts_with_settlements)} accounts)")
                 
-            except Exception as e:
-                print(f"❌ User {user_id_str} processing error: {type(e).__name__}: {e}")
-                users_failed += 1
-                continue
+            else:
+                users_without_earnings += 1
+                print(f"ℹ️ User {username} has no earnings, skipping from report")
         
-        # Update settings with the first rate (for backward compatibility)
+        # Save updated accounts (with refreshed tokens)
+        save_accounts(accounts)
+        
+        # Update settings with the correct rate
         if default_rate:
             settings['settlement_rate'] = default_rate
         elif country_rates:
             # Store first country rate as default
             first_country = list(country_rates.keys())[0]
             settings['settlement_rate'] = country_rates[first_country]
+        else:
+            settings['settlement_rate'] = 0.10  # Fallback
         
         settings['last_updated'] = datetime.now().isoformat()
         settings['updated_by'] = ADMIN_ID
@@ -3144,15 +3742,15 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
         print(f"• Users without earnings: {users_without_earnings}")
         print(f"• Users with settlements: {users_with_settlements}")
         print(f"• Users with only commission: {users_with_only_commission}")
-        print(f"• Total friends in system: {total_friends_count}")
-        print(f"• Eligible friends (10+ counts): {total_eligible_friends}")
         print(f"• Total personal counts: {total_personal_count}")
-        print(f"• Total friend counts: {total_friend_counts}")
-        print(f"• Grand total counts: {total_personal_count + total_friend_counts}")
-        print(f"• Total commission: ${sum(u['total_commission'] for u in all_users_summary):.2f}")
-        print(f"• Total USD: ${total_usd:.2f}")
-        print(f"• Total BDT: {total_bdt:.2f}")
+        print(f"• Total personal USD: ${sum(u['personal_usd'] for u in all_users_summary):.2f}")
+        print(f"• Commission rate used: ${commission_rate}/count")
+        print(f"• Settlement rate used: ${default_rate if default_rate else 'country-specific'}")
         
+        # আগের notification সিস্টেম - ইউপডেট করা (নিচের অংশ একই থাকে)
+        # ... (নোটিফিকেশন অংশ একই থাকবে)
+        
+        # আগের notification সিস্টেম (original) - ইউপডেট করা
         notified_users = 0
         for user_summary in all_users_summary:
             try:
@@ -3186,7 +3784,12 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                 
                 message += f"• 💱 Exchange Rate: 1 USD = {USD_TO_BDT} BDT\n\n"
                 
-                message += "📊 Your Performance:\n"
+                message += "📊 Your Performance (All Accounts):\n"
+                
+                # Show account breakdown
+                if user_summary.get('accounts_with_settlements'):
+                    message += f"• 📱 Active Accounts: {user_summary['active_accounts']}\n"
+                    message += f"• ✅ Accounts with Settlements: {len(user_summary['accounts_with_settlements'])}\n\n"
                 
                 # Country breakdown for personal counts
                 if user_summary['country_totals']:
@@ -3194,24 +3797,24 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                         country = list(user_summary['country_totals'].keys())[0]
                         count = user_summary['country_totals'][country]
                         rate = country_rates.get(country, display_rate) if country_rates else display_rate
-                        message += f"• Your Account: {count} counts ({country})\n"
+                        message += f"• Your Total Counts: {count} counts ({country})\n"
                         message += f"• Your USD: ${user_summary['personal_usd']:.2f} ({count} × ${rate:.3f})\n\n"
                     else:
-                        message += f"• Your Account: {user_summary['total_count']} counts\n"
+                        message += f"• Your Total Counts: {user_summary['total_count']} counts\n"
                         for country, count in user_summary['country_totals'].items():
                             rate = country_rates.get(country, display_rate) if country_rates else display_rate
                             country_usd = count * rate
                             message += f"  └─ {country}: {count} counts (${country_usd:.2f})\n"
                         message += f"• Your USD: ${user_summary['personal_usd']:.2f}\n\n"
                 else:
-                    message += f"• Your Account: {user_summary['total_count']} counts\n"
+                    message += f"• Your Total Counts: {user_summary['total_count']} counts\n"
                     message += f"• Your USD: ${user_summary['personal_usd']:.2f} ({user_summary['total_count']} × ${display_rate:.3f})\n\n"
                 
                 # ফ্রেন্ড কমিশন থাকলে
                 if user_summary['friends_details']:
                     # Count eligible friends (10+ counts)
-                    eligible_friends = [f for f in user_summary['friends_details'] if f['counts'] >= 10]
-                    ineligible_friends = [f for f in user_summary['friends_details'] if f['counts'] < 10]
+                    eligible_friends = [f for f in user_summary['friends_details'] if f['counts'] >= 1]
+                    ineligible_friends = [f for f in user_summary['friends_details'] if f['counts'] < 1]
                     
                     message += "👥 Your Friends Performance:\n"
                     
@@ -3259,7 +3862,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                     message += f"• Friends: 0 users\n\n"
                 
                 # Ineligible friends notification
-                ineligible_friends_count = len([f for f in user_summary.get('friends_details', []) if f['counts'] < 10])
+                ineligible_friends_count = len([f for f in user_summary.get('friends_details', []) if f['counts'] < 1])
                 if ineligible_friends_count > 0:
                     message += f"ℹ️ Note: {ineligible_friends_count} friends have less than 10 counts (minimum required for commission)\n\n"
                 
@@ -3328,6 +3931,19 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             except Exception as e:
                 print(f"❌ Notification failed for {user_summary['user_id']}: {e}")
         
+        # Track which friends are added by whom
+        friend_added_by = {}
+        for user_summary in all_users_summary:
+            for friend in user_summary.get('friends_details', []):
+                friend_id = friend['friend_user_id']
+                if friend_id not in friend_added_by:
+                    friend_added_by[friend_id] = []
+                friend_added_by[friend_id].append({
+                    'added_by': user_summary['username'],
+                    'telegram': user_summary['telegram_username'],
+                    'user_id': user_summary['user_id']
+                })
+        
         # Only send admin report if there are users with earnings
         if all_users_summary:
             # Calculate country-wise summary - PERSONAL COUNTS ONLY
@@ -3343,37 +3959,7 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
                         country_summary[clean_country] = 0
                     country_summary[clean_country] += count
                     actual_personal_counts += count
-                
-                # ❌ FRIENDS COUNTS NOT INCLUDED - এই অংশ বাদ
-                # for friend in user_summary.get('friends_details', []):
-                #     for country in friend.get('countries', []):
-                #         # Clean country name
-                #         clean_country = country.strip(', ')
-                #         if clean_country not in country_summary:
-                #             country_summary[clean_country] = 0
-                #         country_summary[clean_country] += friend.get('counts', 0)
-
-            # Track which friends are added by whom
-            friend_added_by = {}
-            for user_summary in all_users_summary:
-                for friend in user_summary.get('friends_details', []):
-                    friend_id = friend['friend_user_id']
-                    if friend_id not in friend_added_by:
-                        friend_added_by[friend_id] = []
-                    friend_added_by[friend_id].append({
-                        'added_by': user_summary['username'],
-                        'telegram': user_summary['telegram_username']
-                    })
             
-            # Print debug info
-            print(f"🔍 Country summary debug:")
-            print(f"  Country rates: {country_rates}")
-            print(f"  Country summary (Personal only): {country_summary}")
-            print(f"  Total personal count: {total_personal_count}")
-            print(f"  Actual personal counts: {actual_personal_counts}")
-            print(f"  Total friend counts: {total_friend_counts}")
-            print(f"  Grand total counts: {total_personal_count + total_friend_counts}")
-
             # Calculate total friend earnings for all users
             total_friend_earnings = sum(
                 sum(f['earnings'] for f in u['friends_details']) 
@@ -3501,149 +4087,180 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             
             await processing_msg.edit_text(detailed_summary, parse_mode='none')
             
-            # অ্যাডমিনের জন্য ডিটেইলড রিপোর্ট
-            users_per_message = 5
-            total_chunks = (len(all_users_summary) + users_per_message - 1) // users_per_message
-            
-            for chunk_index in range(total_chunks):
-                start_idx = chunk_index * users_per_message
-                end_idx = min(start_idx + users_per_message, len(all_users_summary))
-                chunk = all_users_summary[start_idx:end_idx]
+            # প্রতিটি ইউজারের জন্য আলাদা বার্তা পাঠান (1 জন করে)
+            for user_summary in all_users_summary:
+                # Check if user is in someone's friend list
+                added_by_list = friend_added_by.get(user_summary['user_id'], [])
                 
-                details_message = f"📋 USER DETAILS - PART {chunk_index + 1}/{total_chunks} 📋\n\n"
+                user_message = f"📋 USER DETAILS\n\n"
                 
-                for i, user_summary in enumerate(chunk, start=start_idx + 1):
-                    refresh_icon = " 🔄" if user_summary['token_refreshed'] else ""
-                    settlement_icon = " ✅" if user_summary['has_personal_settlement'] else " 👥"
+                telegram_display = f" (@{user_summary['telegram_username']})" if user_summary['telegram_username'] else ""
+                refresh_icon = " 🔄" if user_summary['token_refreshed'] else ""
+                settlement_icon = " ✅" if user_summary['has_personal_settlement'] else " 👥"
+                
+                user_message += f"👤 User: {user_summary['username']}{telegram_display}{refresh_icon}{settlement_icon}\n"
+                
+                user_data = accounts.get(user_summary['user_id'], {})
+                user_accounts_count = len(user_data.get("accounts", [])) if isinstance(user_data, dict) else 0
+                user_message += f"├─ 📱 Total Accounts: {user_accounts_count}\n"
+                user_message += f"├─ ✅ Active Accounts: {user_summary['active_accounts']}\n"
+                
+                if user_summary.get('accounts_with_settlements'):
+                    user_message += f"├─ 💰 Accounts with Settlements: {len(user_summary['accounts_with_settlements'])}\n"
+                
+                if len(user_summary['countries']) == 1:
+                    user_message += f"├─ 🌍 Country: {user_summary['countries'][0]}\n"
+                elif len(user_summary['countries']) > 1:
+                    user_message += f"├─ 🌍 Countries: {', '.join(user_summary['countries'][:3])}"
+                    if len(user_summary['countries']) > 3:
+                        user_message += f" (+{len(user_summary['countries']) - 3} more)"
+                    user_message += f"\n"
+                else:
+                    user_message += f"├─ 🌍 Countries: All\n"
+                
+                user_message += f"├─ 🔢 Personal Count: {user_summary['total_count']}\n"
+                user_message += f"├─ 💰 Personal Earnings: ${user_summary['personal_usd']:.2f}\n"
+                
+                if user_summary['friends_details']:
+                    eligible_friends = len([f for f in user_summary['friends_details'] if f['counts'] >= 1])
+                    ineligible_friends = len([f for f in user_summary['friends_details'] if f['counts'] < 1])
+                    user_message += f"├─ 🤝 Total Friends: {len(user_summary['friends_details'])} ({eligible_friends} eligible, {ineligible_friends} <10 counts)\n"
                     
-                    # Check if user is in someone's friend list
-                    added_by_list = friend_added_by.get(user_summary['user_id'], [])
-                    added_by_message = ""
-                    if added_by_list:
-                        names = []
-                        for adder in added_by_list[:3]:  # Show max 3
-                            if adder['telegram']:
-                                names.append(f"{adder['added_by']} (@{adder['telegram']})")
-                            else:
-                                names.append(adder['added_by'])
-                        added_by_message = f" ⚠️ Added by: {', '.join(names)}"
-                        if len(added_by_list) > 3:
-                            added_by_message += f" and {len(added_by_list) - 3} more"
-                    
-                    telegram_display = f" (@{user_summary['telegram_username']})" if user_summary['telegram_username'] else ""
-                    
-                    details_message += f"{i}. {user_summary['username']}{telegram_display}{refresh_icon}{settlement_icon}{added_by_message}\n"
-                    
-                    user_data = accounts.get(user_summary['user_id'], {})
-                    user_accounts_count = len(user_data.get("accounts", [])) if isinstance(user_data, dict) else 0
-                    details_message += f"   ├─ 👥 Accounts: {user_accounts_count}\n"
-                    
-                    if len(user_summary['countries']) == 1:
-                        details_message += f"   ├─ 🌍 Country: {user_summary['countries'][0]}\n"
-                    elif len(user_summary['countries']) > 1:
-                        details_message += f"   ├─ 🌍 Countries: {', '.join(user_summary['countries'])}\n"
-                    else:
-                        details_message += f"   ├─ 🌍 Countries: All\n"
-                    
-                    details_message += f"   ├─ 🔢 Personal Count: {user_summary['total_count']}\n"
-                    details_message += f"   ├─ 💰 Base Earnings: ${user_summary['personal_usd']:.2f}\n"
-                    
+                    # Add friend details
                     if user_summary['friends_details']:
-                        eligible_friends = len([f for f in user_summary['friends_details'] if f['counts'] >= 10])
-                        ineligible_friends = len([f for f in user_summary['friends_details'] if f['counts'] < 10])
-                        details_message += f"   ├─ 🤝 Total Friends: {len(user_summary['friends_details'])} ({eligible_friends} eligible, {ineligible_friends} <10 counts)\n"
-                        
+                        user_message += f"├─ 📊 Friend Details:\n"
                         for j, friend in enumerate(user_summary['friends_details'], 1):
-                            if friend['counts'] >= 10:
+                            if friend['counts'] >= 1:
                                 friend_telegram_display = f" (@{friend['telegram_username']})" if friend['telegram_username'] else ""
                                 friend_earned = friend['earnings']
                                 friend_earned_bdt = friend_earned * USD_TO_BDT
                                 
-                                # Check if friend is added by others
-                                friend_added_by_list = friend_added_by.get(friend['friend_user_id'], [])
-                                friend_added_by_msg = ""
-                                if len(friend_added_by_list) > 1:  # If added by more than 1 person
-                                    other_adders = [a for a in friend_added_by_list if a['added_by'] != user_summary['username']]
-                                    if other_adders:
-                                        adder_names = []
-                                        for adder in other_adders[:2]:
-                                            if adder['telegram']:
-                                                adder_names.append(f"{adder['added_by']} (@{adder['telegram']})")
-                                            else:
-                                                adder_names.append(adder['added_by'])
-                                        friend_added_by_msg = f" ⚠️ Also added by: {', '.join(adder_names)}"
-                                        if len(other_adders) > 2:
-                                            friend_added_by_msg += f" and {len(other_adders) - 2} more"
-                                
-                                details_message += f"   ├─ 👤 Friend {j}: {friend['name']}{friend_telegram_display}{friend_added_by_msg}\n"
-                                details_message += f"   ├─   ├─ 📱 Accounts: {friend['accounts']}\n"
-                                details_message += f"   ├─   ├─ 🔢 Counts: {friend['counts']} ✅\n"
-                                details_message += f"   ├─   ├─ 💰 Earned: ${friend_earned:.2f}/{friend_earned_bdt:.0f}bdt\n"
+                                user_message += f"├─ {j}. {friend['name']}{friend_telegram_display}\n"
+                                user_message += f"├─   ├─ 📱 Accounts: {friend['accounts']}\n"
                                 
                                 if friend['countries']:
-                                    details_message += f"   ├─   ├─ 🌍 Countries: {', '.join(friend['countries'])}\n"
+                                    if len(friend['countries']) == 1:
+                                        user_message += f"├─   ├─ 🌍 Country: {friend['countries'][0]}\n"
+                                    else:
+                                        user_message += f"├─   ├─ 🌍 Countries: {', '.join(friend['countries'])}\n"
                                 
-                                details_message += f"   ├─   └─ 💸 Commission: ${friend['commission']:.2f}\n"
+                                user_message += f"├─   ├─ 🔢 Counts: {friend['counts']} ✅\n"
+                                user_message += f"├─   ├─ 💰 Earned: ${friend_earned:.2f} ({friend_earned_bdt:.0f} BDT)\n"
+                                user_message += f"├─   └─ 💸 Commission: ${friend['commission']:.2f}\n"
                             else:
-                                details_message += f"   ├─ 👤 Friend {j}: {friend['name']} ❌ <10 counts\n"
-                    else:
-                        details_message += f"   ├─ 🤝 Total Friends: 0 (0 eligible)\n"
+                                user_message += f"├─ {j}. {friend['name']} ❌ <10 counts\n"
+                else:
+                    user_message += f"├─ 🤝 Total Friends: 0 (0 eligible)\n"
+                
+                # Calculate friend earnings for this user
+                friend_earnings = sum(f['earnings'] for f in user_summary['friends_details'])
+                total_all_earnings_user = user_summary['personal_usd'] + friend_earnings + user_summary['total_commission']
+                total_all_bdt_user = total_all_earnings_user * USD_TO_BDT
+                
+                # কাউন্ট সামারি
+                if user_summary['friends_details']:
+                    user_message += f"├─ 📊 Count Summary:\n"
+                    user_message += f"├─   ├─ 🔢 Your Counts: {user_summary['total_count']}\n"
+                    user_message += f"├─   ├─ 👥 Friend Counts: {user_summary['friend_counts']}\n"
+                    user_message += f"├─   └─ 📈 Total Counts: {user_summary['total_counts']}\n"
+                
+                user_message += f"├─ 💰 Total Earnings:\n"
+                user_message += f"├─   ├─ Personal: ${user_summary['personal_usd']:.2f}\n"
+                
+                if friend_earnings > 0:
+                    user_message += f"├─   ├─ Friends Earned: ${friend_earnings:.2f}\n"
+                
+                if user_summary['total_commission'] > 0:
+                    user_message += f"├─   ├─ Commission: ${user_summary['total_commission']:.2f}\n"
+                
+                user_message += f"├─   └─ Total: ${total_all_earnings_user:.2f} ({total_all_bdt_user:.0f} BDT)\n"
+                
+                # Last active time
+                last_active = user_data.get("last_active", "")
+                if last_active:
+                    try:
+                        last_active_time = datetime.fromisoformat(last_active)
+                        time_ago = datetime.now() - last_active_time
+                        if time_ago.days > 0:
+                            last_active_str = f"{time_ago.days} days ago"
+                        elif time_ago.seconds > 3600:
+                            last_active_str = f"{time_ago.seconds // 3600} hours ago"
+                        elif time_ago.seconds > 60:
+                            last_active_str = f"{time_ago.seconds // 60} minutes ago"
+                        else:
+                            last_active_str = "Just now"
+                    except:
+                        last_active_str = "Unknown"
+                else:
+                    last_active_str = "Unknown"
+                
+                user_message += f"└─ ⏰ Last Active: {last_active_str}\n\n"
+                
+                # If user is in someone's friends list, show warning
+                if added_by_list:
+                    names = []
+                    for adder in added_by_list[:2]:  # Show max 2
+                        if adder['telegram']:
+                            names.append(f"{adder['added_by']} (@{adder['telegram']})")
+                        else:
+                            names.append(adder['added_by'])
                     
-                    # Calculate friend earnings for this user
-                    friend_earnings = sum(f['earnings'] for f in user_summary['friends_details'])
-                    total_all_earnings_user = user_summary['personal_usd'] + friend_earnings + user_summary['total_commission']
-                    total_all_bdt_user = total_all_earnings_user * USD_TO_BDT
+                    added_by_message = f"⚠️ Already Added by: {', '.join(names)}"
+                    if len(added_by_list) > 2:
+                        added_by_message += f" and {len(added_by_list) - 2} more"
                     
-                    # কাউন্ট সামারি
-                    if user_summary['friends_details']:
-                        details_message += f"   ├─ 📊 Count Summary:\n"
-                        details_message += f"   ├─   ├─ 🔢 Your Counts: {user_summary['total_count']}\n"
-                        details_message += f"   ├─   ├─ 👥 Friend Counts: {user_summary['friend_counts']}\n"
-                        details_message += f"   ├─   └─ 📈 Total Counts: {user_summary['total_counts']}\n"
-                    
-                    details_message += f"   ├─ 💰 Personal Earnings: ${user_summary['personal_usd']:.2f}\n"
-                    if friend_earnings > 0:
-                        details_message += f"   ├─ 👥 All Friends Earned: ${friend_earnings:.2f}\n"
-                    if user_summary['total_commission'] > 0:
-                        details_message += f"   ├─ 💸 Total Commission: ${user_summary['total_commission']:.2f}\n"
-                    details_message += f"   ├─ 📊 Total (P+F+C): ${total_all_earnings_user:.2f}\n"
-                    details_message += f"   └─ 🇧🇩 Total BDT: {total_all_bdt_user:.0f}\n\n"
+                    user_message += f"{added_by_message}\n\n"
+                else:
+                    user_message += f"[🔄 Payment Pending]\n\n"
                 
-                chunk_personal_counts = sum(u['total_count'] for u in chunk)
-                chunk_friend_counts = sum(u['friend_counts'] for u in chunk)
-                chunk_total_counts = sum(u['total_counts'] for u in chunk)
-                chunk_personal_usd = sum(u['personal_usd'] for u in chunk)
-                chunk_friend_earnings = sum(sum(f['earnings'] for f in u['friends_details']) for u in chunk)
-                chunk_commission = sum(u['total_commission'] for u in chunk)
-                chunk_total = sum(u['total_usd'] for u in chunk)
-                chunk_total_all = chunk_personal_usd + chunk_friend_earnings + chunk_commission
-                chunk_bdt = chunk_total_all * USD_TO_BDT
+                # Create keyboard buttons
+                keyboard = []
                 
-                details_message += f"📊 Chunk {chunk_index + 1} Total:\n"
-                details_message += f"• 👥 Users: {len(chunk)}\n"
-                details_message += f"• 🔢 Personal Counts: {chunk_personal_counts}\n"
-                details_message += f"• 👥 Friend Counts: {chunk_friend_counts}\n"
-                details_message += f"• 📈 Total Counts: {chunk_total_counts}\n"
-                details_message += f"• 💵 Personal USD: ${chunk_personal_usd:.2f}\n"
-                details_message += f"• 👥 Friends Earned: ${chunk_friend_earnings:.2f}\n"
-                details_message += f"• 💸 Commission: ${chunk_commission:.2f}\n"
-                details_message += f"• 💰 Total (P+F+C): ${chunk_total_all:.2f}\n"
-                details_message += f"• 🇧🇩 Total BDT: {chunk_bdt:.0f}\n\n"
+                if not added_by_list and user_summary['has_earnings']:
+                    # Only show payment button if user is not in friends list and has earnings
+                    keyboard.append([
+                        InlineKeyboardButton(
+                            f"✅ Complete {user_summary['username']}", 
+                            callback_data=f"payment_complete_{user_summary['user_id']}_{target_date_str}"
+                        )
+                    ])
                 
-                if chunk_index < total_chunks - 1:
-                    details_message += "⬇️ More details in next message..."
+                keyboard.append([
+                    InlineKeyboardButton(
+                        "📋 Details", 
+                        callback_data=f"payment_details_{user_summary['user_id']}"
+                    )
+                ])
                 
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                # Send individual message for each user
                 try:
                     await context.bot.send_message(
                         ADMIN_ID,
-                        details_message,
+                        user_message,
+                        reply_markup=reply_markup,
                         parse_mode='none'
                     )
-                    await asyncio.sleep(1)
+                    await asyncio.sleep(0.5)
                 except Exception as e:
-                    print(f"❌ Error sending chunk {chunk_index + 1}: {e}")
+                    print(f"❌ Error sending user message {user_summary['username']}: {e}")
+            
+            # Send final statistics
+            final_stats = f"📊 Payment Statistics:\n\n"
+            final_stats += f"• 📅 Settlement Date: {target_date_display}\n"
+            final_stats += f"• 👥 Total Users: {total_users}\n"
+            final_stats += f"• ✅ Direct Payment Required: {len([u for u in all_users_summary if not u['in_friends_list']])}\n"
+            final_stats += f"• 👥 Payment via Friends: {len([u for u in all_users_summary if u['in_friends_list']])}\n"
+            final_stats += f"• 💰 Total Amount: ${total_all_earnings:.2f}\n"
+            final_stats += f"• 🇧🇩 Total BDT: {total_all_bdt:.0f}\n\n"
+            final_stats += f"🔄 Payment completion rate: {len([u for u in all_users_summary if not u['in_friends_list']])}/{total_users} users\n"
+            final_stats += f"⏰ Report generated at: {datetime.now().strftime('%H:%M:%S')}"
+            
+            await context.bot.send_message(ADMIN_ID, final_stats, parse_mode='none')
             
         else:
+            # No users with earnings
             summary_message = "🎯 Settlement Rate Update Complete 🎯\n\n"
             
             summary_message += "📊 Operation Summary:\n"
@@ -3689,6 +4306,455 @@ async def set_settlement_rate(update: Update, context: CallbackContext):
             "• `/setrate 0.07 canada 0.04 benin 2/12`\n"
             "• `/setrate notice Payment tomorrow`"
         )
+
+# এই কোডটি main() ফাংশনের আগে যুক্ত করুন
+async def handle_payment_callback(update: Update, context: CallbackContext):
+    """Handle payment completion callbacks"""
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    
+    if data.startswith('payment_complete_'):
+        # Format: payment_complete_userID_date
+        parts = data.split('_')
+        if len(parts) >= 3:
+            user_id = parts[2]
+            date_str = parts[3] if len(parts) > 3 else datetime.now().strftime('%Y-%m-%d')
+            
+            await complete_user_payment(query, context, user_id, date_str)
+    
+    elif data.startswith('payment_details_'):
+        user_id = data.split('_')[2]
+        await show_user_payment_details(query, context, user_id)
+
+async def complete_user_payment(query, context, user_id, date_str):
+    """Complete payment for a specific user"""
+    await query.edit_message_text(f"🔄 Completing payment for user {user_id}...")
+    
+    try:
+        # Get user info
+        accounts = load_accounts()
+        user_data = accounts.get(user_id, {})
+        
+        if not user_data:
+            await query.edit_message_text(f"❌ User {user_id} not found!")
+            return
+        
+        user_accounts = user_data.get("accounts", [])
+        username = user_accounts[0].get('username', 'Unknown') if user_accounts else 'Unknown'
+        telegram_username = user_accounts[0].get('telegram_username', '') if user_accounts else ''
+        
+        # Get user's payment details from the message text
+        original_text = query.message.text
+        
+        # Parse amounts from message
+        import re
+        
+        # Extract values from the original message
+        personal_earnings = 0
+        friend_earnings = 0
+        commission = 0
+        total_usd = 0
+        total_bdt = 0
+        personal_count = 0
+        friend_count = 0
+        friends_details = []
+        
+        # ============ EXTRACT ALL VALUES ============
+        
+        # Extract personal earnings
+        personal_match = re.search(r'Personal Earnings: \$([\d\.]+)', original_text)
+        if personal_match:
+            personal_earnings = float(personal_match.group(1))
+        
+        # Extract friend earnings
+        friend_match = re.search(r'Friends Earned: \$([\d\.]+)', original_text)
+        if friend_match:
+            friend_earnings = float(friend_match.group(1))
+        
+        # Extract commission
+        commission_match = re.search(r'Commission: \$([\d\.]+)', original_text)
+        if commission_match:
+            commission = float(commission_match.group(1))
+        
+        # Extract total USD
+        total_match = re.search(r'Total USD: \$([\d\.]+)', original_text)
+        if total_match:
+            total_usd = float(total_match.group(1))
+        else:
+            total_match = re.search(r'Total: \$([\d\.]+)', original_text)
+            if total_match:
+                total_usd = float(total_match.group(1))
+        
+        # Extract total BDT
+        bdt_match = re.search(r'Total BDT: (\d+)', original_text)
+        if bdt_match:
+            total_bdt = int(bdt_match.group(1))
+        else:
+            total_bdt = total_usd * 125
+        
+        # Extract personal count
+        count_match = re.search(r'Personal Count: ([\d,\.]+)', original_text)
+        if count_match:
+            personal_count_str = count_match.group(1).replace(',', '')
+            personal_count = int(float(personal_count_str))
+        
+        # Extract friend count
+        friend_count_match = re.search(r'Friend Count: ([\d,\.]+)', original_text)
+        if friend_count_match:
+            friend_count_str = friend_count_match.group(1).replace(',', '')
+            friend_count = int(float(friend_count_str))
+        
+        # ============ EXTRACT FRIENDS DETAILS FROM USER DETAILS SECTION ============
+        # Find the USER DETAILS section
+        user_details_section = original_text
+        
+        # Pattern to find all friends with their details
+        # Format: ├─ 1. FriendName\n├─   ├─ 📱 Accounts: 1\n├─   ├─ 🌍 Country: Canada\n├─   ├─ 🔢 Counts: 11 ✅\n├─   ├─ 💰 Earned: $0.66 (82 BDT)\n├─   └─ 💸 Commission: $0.02
+        friend_pattern = r'├─ (\d+)\. ([^\n]+)\n(.*?)(?=├─ \d+\.|├─ 📊 Count Summary|├─ 💰 Total Earnings|└─ ⏰ Last Active|$)'
+        friend_matches = re.findall(friend_pattern, user_details_section, re.DOTALL)
+        
+        total_friend_counts = 0
+        total_friend_earnings = 0
+        total_friend_commission = 0
+        
+        for match in friend_matches:
+            friend_num, friend_name, friend_section = match
+            
+            # Extract counts
+            counts_match = re.search(r'🔢 Counts: (\d+)', friend_section)
+            friend_counts = 0
+            if counts_match:
+                friend_counts = int(counts_match.group(1))
+            
+            # Extract earned amount
+            earned_match = re.search(r'💰 Earned: \$([\d\.]+)', friend_section)
+            friend_earned = 0
+            if earned_match:
+                friend_earned = float(earned_match.group(1))
+            
+            # Extract commission
+            comm_match = re.search(r'💸 Commission: \$([\d\.]+)', friend_section)
+            friend_commission = 0
+            if comm_match:
+                friend_commission = float(comm_match.group(1))
+            
+            # Extract telegram from name
+            friend_telegram = ""
+            if '@' in friend_name:
+                name_parts = friend_name.split('@')
+                friend_name = name_parts[0].strip()
+                friend_telegram = name_parts[1].strip() if len(name_parts) > 1 else ""
+            
+            friends_details.append({
+                'name': friend_name.strip(),
+                'telegram': friend_telegram,
+                'counts': friend_counts,
+                'amount': friend_earned,
+                'commission': friend_commission
+            })
+            
+            total_friend_counts += friend_counts
+            total_friend_earnings += friend_earned
+            total_friend_commission += friend_commission
+            
+            print(f"📊 Friend: {friend_name} - Counts: {friend_counts}, Earned: ${friend_earned}, Commission: ${friend_commission}")
+        
+        # If we have friends_details, update friend_count and friend_earnings
+        if friends_details:
+            friend_count = len(friends_details)
+            friend_earnings = total_friend_earnings
+            commission = total_friend_commission  # Use the sum of individual friend commissions
+            print(f"📊 Total: {friend_count} friends, {total_friend_counts} counts, ${friend_earnings:.2f} earned, ${commission:.2f} commission")
+        
+        # Calculate commission if still 0 but we have friend counts
+        if commission == 0 and total_friend_counts > 0:
+            # Commission is $0.002 per count (0.002 = 0.2 cents)
+            commission = total_friend_counts * 0.002
+            print(f"📊 Calculated commission from counts: ${commission:.2f} ({total_friend_counts} × 0.002)")
+        
+        # Recalculate total USD if needed
+        if total_usd == 0:
+            total_usd = personal_earnings + friend_earnings + commission
+            total_bdt = total_usd * 125
+            print(f"📊 Recalculated total USD: ${total_usd:.2f}")
+        
+        # Log extracted data for debugging
+        print(f"📊 FINAL payment data for {username}:")
+        print(f"  Personal: {personal_count} counts, ${personal_earnings:.2f}")
+        print(f"  Friends: {friend_count} friends, {total_friend_counts} counts, ${friend_earnings:.2f}")
+        print(f"  Commission: ${commission:.2f}")
+        print(f"  Total: ${total_usd:.2f} / {total_bdt:.0f} BDT")
+        
+        # Get current date and time
+        current_date = datetime.now().strftime('%d %B %Y')
+        current_time = datetime.now().strftime('%H:%M:%S')
+        
+        # ============ 1. SEND NOTIFICATION TO THE USER ============
+        user_notification = f"✨ Payment Complete Notification ✨\n\n"
+        user_notification += f"✅ Your settlement payment has been processed!\n\n"
+        user_notification += f"📅 Settlement Date: {current_date}\n"
+        user_notification += f"👤 Username: {username}\n"
+        if telegram_username:
+            user_notification += f"📱 Telegram: @{telegram_username}\n"
+        user_notification += f"💰 Total Amount: ${total_usd:.2f} USD\n"
+        user_notification += f"🇧🇩 Converted: {total_bdt:.0f} BDT (${total_usd:.2f} × 125)\n\n"
+        
+        if personal_count > 0:
+            user_notification += f"🔢 Your Counts: {personal_count}\n\n"
+        
+        user_notification += f"📊 Your Earnings Summary:\n"
+        user_notification += f"├─ 💵 Personal Earnings: ${personal_earnings:.2f} ({personal_count} counts)\n"
+        
+        if friends_details:
+            user_notification += f"├─ 👥 {len(friends_details)} Friends Performance:\n"
+            for i, friend in enumerate(friends_details, 1):
+                friend_display = friend['name']
+                if friend.get('telegram'):
+                    friend_display += f" (@{friend['telegram']})"
+                user_notification += f"├─ {i}. {friend_display}: ${friend['amount']:.2f} ({friend.get('counts', 0)} counts)\n"
+        
+        if total_friend_counts > 0:
+            user_notification += f"├─ 💸 Commission: ${commission:.2f} ({total_friend_counts} × $0.002)\n"
+        
+        user_notification += f"└─ 📈 Total: ${total_usd:.2f} ({total_bdt:.0f} BDT)\n\n"
+        
+        # Add friends to collect from
+        if friends_details:
+            user_notification += f"🤝 Friends to Collect From ({len(friends_details)} friends):\n"
+            total_friends_amount = 0
+            
+            for i, friend in enumerate(friends_details, 1):
+                friend_display = friend['name']
+                if friend.get('telegram'):
+                    friend_display += f" (@{friend['telegram']})"
+                
+                friend_bdt = friend['amount'] * 125
+                total_friends_amount += friend['amount']
+                user_notification += f"• {friend_display} - ${friend['amount']:.2f} ({friend_bdt:.0f} BDT) - {friend.get('counts', 0)} counts\n"
+            
+            total_friends_bdt = total_friends_amount * 125
+            user_notification += f"\n💰 Total to collect from friends: ${total_friends_amount:.2f} ({total_friends_bdt:.0f} BDT)\n\n"
+        
+        user_notification += f"🏦 Payment Status: ✅ COMPLETED\n\n"
+        user_notification += f"💡 Important Notes:\n"
+        user_notification += f"• Your payment of ${total_usd:.2f} ({total_bdt:.0f} BDT) has been sent to your account\n"
+        
+        if friends_details:
+            user_notification += f"• Please collect from your {len(friends_details)} friends as listed above\n"
+        
+        user_notification += f"• Contact admin if you face any issues\n\n"
+        user_notification += f"⏰ Payment Time: {current_time}\n"
+        user_notification += f"📨 Transaction ID: PAY-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        
+        user_notified = False
+        try:
+            await context.bot.send_message(
+                int(user_id),
+                user_notification,
+                parse_mode='none'
+            )
+            user_notified = True
+            print(f"✅ Notification sent to user {user_id}")
+        except Exception as e:
+            print(f"❌ Could not notify user {user_id}: {e}")
+        
+        # ============ 2. SEND NOTIFICATIONS TO ALL FRIENDS ============
+        friends_notified = 0
+        for friend in friends_details:
+            # Find friend's user ID from accounts
+            friend_user_id = None
+            friend_name = friend['name']
+            friend_telegram = friend.get('telegram', '')
+            
+            for acc_id, acc_data in accounts.items():
+                if acc_id == str(ADMIN_ID):
+                    continue
+                
+                acc_accounts = acc_data.get("accounts", [])
+                if acc_accounts:
+                    acc_username = acc_accounts[0].get('username', '')
+                    acc_telegram = acc_accounts[0].get('telegram_username', '')
+                    acc_nickname = acc_accounts[0].get('nickname', '')
+                    
+                    if (friend_name.lower() in acc_username.lower() or 
+                        friend_name.lower() in acc_nickname.lower() or
+                        (friend_telegram and friend_telegram.lower() == acc_telegram.lower())):
+                        friend_user_id = acc_id
+                        print(f"✅ Found friend: {acc_username} (ID: {friend_user_id})")
+                        break
+            
+            if friend_user_id and friend['amount'] > 0:
+                friend_notification = f"📢 Payment Notification from Your Friend ✨\n\n"
+                friend_notification += f"👤 Your Friend: {username}"
+                if telegram_username:
+                    friend_notification += f" (@{telegram_username})"
+                friend_notification += f"\n\n"
+                
+                friend_notification += f"💰 Your Settlement Details:\n"
+                friend_notification += f"├─ 📅 Date: {current_date}\n"
+                friend_notification += f"├─ 🔢 Your Counts: {friend.get('counts', 0)}\n"
+                friend_notification += f"├─ 💰 Amount: ${friend['amount']:.2f} USD\n"
+                friend_notification += f"├─ 🇧🇩 BDT: {friend['amount'] * 125:.0f}\n"
+                friend_notification += f"└─ 🤝 Status: Ready for Collection\n\n"
+                
+                friend_notification += f"💡 Important Instructions:\n"
+                friend_notification += f"• Your friend {username} has processed your settlement\n"
+                friend_notification += f"• Please collect ${friend['amount']:.2f} ({friend['amount'] * 125:.0f} BDT) from them\n"
+                friend_notification += f"• Contact them directly for payment collection\n\n"
+                
+                friend_notification += f"⏰ Notification Time: {current_time}\n"
+                friend_notification += f"📨 Transaction ID: REF-{datetime.now().strftime('%Y%m%d-%H%M%S')}\n\n"
+                friend_notification += f"✅ Your payment is ready! Contact your friend now."
+                
+                try:
+                    await context.bot.send_message(
+                        int(friend_user_id),
+                        friend_notification,
+                        parse_mode='none'
+                    )
+                    friends_notified += 1
+                    print(f"✅ Notification sent to friend {friend_user_id}")
+                except Exception as e:
+                    print(f"❌ Could not notify friend {friend_user_id}: {e}")
+        
+        # ============ 3. UPDATE ADMIN MESSAGE ============
+        if "[🔄 Payment Pending]" in original_text:
+            updated_text = original_text.replace("[🔄 Payment Pending]", "[✅ Payment Completed]")
+        else:
+            updated_text = original_text + f"\n\n✅ Payment Completed\n⏰ Time: {current_time}"
+        
+        # Add notification status
+        notification_status = f"\n📨 Notifications: "
+        if user_notified:
+            notification_status += f"✅ User"
+            if friends_notified > 0:
+                notification_status += f", 👥 {friends_notified} friends"
+        else:
+            notification_status += f"❌ Failed"
+        
+        updated_text += notification_status
+        
+        # Create new keyboard without payment button
+        keyboard = []
+        keyboard.append([
+            InlineKeyboardButton("📋 Details", callback_data=f"payment_details_{user_id}")
+        ])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            updated_text,
+            reply_markup=reply_markup,
+            parse_mode='none'
+        )
+        
+        # ============ 4. SEND CONFIRMATION TO ADMIN ============
+        confirmation = f"✅ Payment Completed Successfully!\n\n"
+        confirmation += f"👤 User: {username} (ID: {user_id})\n"
+        
+        if telegram_username:
+            confirmation += f"📱 Telegram: @{telegram_username}\n"
+        
+        confirmation += f"📅 Date: {current_date}\n"
+        confirmation += f"⏰ Time: {current_time}\n"
+        confirmation += f"💰 Total Amount: ${total_usd:.2f} USD\n"
+        confirmation += f"🇧🇩 BDT: {total_bdt:.0f} (${total_usd:.2f} × 125)\n\n"
+        
+        confirmation += f"📊 Breakdown:\n"
+        confirmation += f"• Personal: ${personal_earnings:.2f} ({personal_count} counts)\n"
+        if friend_earnings > 0:
+            confirmation += f"• Friends Earned: ${friend_earnings:.2f} ({total_friend_counts} counts)\n"
+        if commission > 0:
+            confirmation += f"• Commission: ${commission:.2f}\n\n"
+        
+        # Show friends list in admin confirmation with correct commission
+        if friends_details:
+            confirmation += f"👥 Friends Details ({len(friends_details)} friends):\n"
+            for i, friend in enumerate(friends_details, 1):
+                friend_display = friend['name']
+                if friend.get('telegram'):
+                    friend_display += f" (@{friend['telegram']})"
+                confirmation += f"  {i}. {friend_display} - Counts: {friend.get('counts', 0)}, Earned: ${friend['amount']:.2f}, Commission: ${friend.get('commission', friend.get('counts', 0) * 0.002):.2f}\n"
+            confirmation += f"\n"
+        
+        confirmation += f"📨 Notifications Sent:\n"
+        confirmation += f"• ✅ To User: {'✅ Yes' if user_notified else '❌ No'}\n"
+        
+        if friends_notified > 0:
+            confirmation += f"• 👥 To Friends: {friends_notified} users\n"
+        else:
+            confirmation += f"• 👥 To Friends: No friends to notify\n"
+        
+        confirmation += f"\n✅ Payment marked as completed in system."
+        
+        await context.bot.send_message(ADMIN_ID, confirmation, parse_mode='none')
+        
+        # ============ 5. FORWARD PAYMENT CONFIRMATION TO GROUP ============
+        await forward_payment_confirmation_to_group(
+            context=context,
+            user_id=user_id,
+            username=username,
+            telegram_username=telegram_username,
+            total_usd=total_usd,
+            total_bdt=total_bdt,
+            personal_count=personal_count,
+            personal_earnings=personal_earnings,
+            friend_count=friend_count,
+            friend_earnings=friend_earnings,
+            commission=commission,
+            friends_details=friends_details,
+            is_fake=False
+        )
+        
+    except Exception as e:
+        print(f"❌ Error completing payment: {e}")
+        import traceback
+        traceback.print_exc()
+        await query.edit_message_text(f"❌ Error completing payment: {e}")
+
+async def show_user_payment_details(query, context, user_id):
+    """Show detailed payment information for a user"""
+    await query.answer("Fetching details...")
+    
+    # Get user details from accounts
+    accounts = load_accounts()
+    user_data = accounts.get(user_id, {})
+    
+    if not user_data:
+        await query.edit_message_text(f"❌ User {user_id} not found!")
+        return
+    
+    user_accounts = user_data.get("accounts", [])
+    username = user_accounts[0].get('username', 'Unknown') if user_accounts else 'Unknown'
+    telegram_username = user_accounts[0].get('telegram_username', '') if user_accounts else ''
+    
+    details = f"📋 Payment Details for {username}\n\n"
+    details += f"🆔 User ID: {user_id}\n"
+    details += f"👤 Telegram: @{telegram_username if telegram_username else 'N/A'}\n"
+    details += f"📱 Accounts: {len(user_accounts)}\n"
+    details += f"⏰ Last Active: {user_data.get('last_active', 'N/A')}\n\n"
+    
+    # Show account details
+    details += "🔐 Account Information:\n"
+    for i, acc in enumerate(user_accounts, 1):
+        status = "✅" if acc.get('active', True) else "❌"
+        login_status = "🔓" if acc.get('token') else "🔒"
+        details += f"{i}. {status}{login_status} {acc.get('custom_name', acc['username'])}\n"
+    
+    # Add close button
+    keyboard = [
+        [InlineKeyboardButton("❌ Close", callback_data="close_details")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.message.reply_text(
+        details,
+        reply_markup=reply_markup,
+        parse_mode='none'
+    )
+
+
 
 async def admin_add_account(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != ADMIN_ID:
@@ -3779,6 +4845,85 @@ async def admin_add_account(update: Update, context: CallbackContext) -> None:
         
     except Exception as e:
         await update.message.reply_text(f"❌ Error: {e}")
+
+async def handle_start_bot_now(update: Update, context: CallbackContext):
+    """Handle start bot button after membership verification"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "start_bot_now":
+        try:
+            # Delete the verification message first
+            await query.delete_message()
+            
+            # Create a new message with start command simulation
+            # Instead of simulating /start, just show the main menu directly
+            user_id = query.from_user.id
+            
+            active_accounts = await account_manager.initialize_user(user_id)
+            
+            if user_id == ADMIN_ID:
+                keyboard = [
+                    [KeyboardButton("➕ Add Account"), KeyboardButton("📋 List Accounts")],
+                    [KeyboardButton("🚀 Refresh Server"), KeyboardButton("💰 Set Rate")],
+                    [KeyboardButton("📊 Statistics"), KeyboardButton("📱 Switch Account")]
+                ]
+                reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+                
+                remaining = account_manager.get_user_remaining_checks(user_id)
+                active_accounts_count = account_manager.get_user_active_accounts_count(user_id)
+                selected_account = account_manager.get_selected_account_name(user_id)
+                
+                await query.message.reply_text(
+                    f"🔥 WA OTP Bot 👑\n\n"
+                    f"📱 Active Account: {selected_account}\n"
+                    f"✅ Active Login: {active_accounts_count}\n"
+                    f"🎯 Remaining Checks: {remaining}\n\n"
+                    f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n\n"
+                    f"✨ Welcome Admin! ✨",
+                    reply_markup=reply_markup,
+                    parse_mode='none'
+                )
+                return
+                
+            keyboard = [
+                [KeyboardButton("🚀 Refresh Server"), KeyboardButton("📱 Switch Account")],
+                [KeyboardButton("📦 My Settlements"), KeyboardButton("📊 Statistics")]
+            ]
+            reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+            
+            remaining = account_manager.get_user_remaining_checks(user_id)
+            active_accounts_count = account_manager.get_user_active_accounts_count(user_id)
+            selected_account = account_manager.get_selected_account_name(user_id)
+            
+            if active_accounts == 0:
+                await query.message.reply_text(
+                    f"❌ Access Denied!\n\n"
+                    f"Please contact admin for access.\n"
+                    f"👤 Admin: ",
+                    reply_markup=reply_markup,
+                    parse_mode='none'
+                )
+                return
+            
+            await query.message.reply_text(
+                f"🔥 WA OTP Bot 🔥\n\n"
+                f"📱 Active Account: {selected_account}\n"
+                f"✅ Active Login: {active_accounts_count}\n"
+                f"🎯 Remaining Checks: {remaining}\n\n"
+                f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n\n"
+                f"✨ Welcome! Start checking numbers now! ✨",
+                reply_markup=reply_markup,
+                parse_mode='none'
+            )
+            
+        except Exception as e:
+            print(f"❌ Error in start_bot_now: {e}")
+            await query.message.reply_text(
+                "✅ Membership Verified!\n\n"
+                "Please use /start command to access the bot.",
+                parse_mode='none'
+            )
 
 async def admin_remove_account(update: Update, context: CallbackContext) -> None:
     if update.effective_user.id != ADMIN_ID:
@@ -3984,6 +5129,56 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
 async def start(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     
+    # Check membership requirements
+    channel_joined, group_joined, missing = await check_membership_requirements(context, user_id)
+    
+    if not (channel_joined and group_joined):
+        # Create beautiful buttons for missing requirements
+        keyboard = []
+        
+        if not channel_joined:
+            keyboard.append([InlineKeyboardButton(
+                "📢 Join Channel", 
+                url=CHANNEL_INVITE_LINK
+            )])
+        
+        if not group_joined:
+            keyboard.append([InlineKeyboardButton(
+                "💰 Join Payment Group", 
+                url=PAYMENT_GROUP_INVITE_LINK
+            )])
+        
+        keyboard.append([InlineKeyboardButton(
+            "🔄 Check Membership", 
+            callback_data="check_membership"
+        )])
+        
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        # Create status indicators
+        channel_status = "❌ Not Joined" if not channel_joined else "✅ Joined"
+        group_status = "❌ Not Joined" if not group_joined else "✅ Joined"
+        
+        missing_text = ", ".join(missing)
+        
+        await update.message.reply_text(
+            f"🔒 Access Restricted 🔒\n\n"
+            f"Welcome to WA OTP Bot! 🚀\n\n"
+            f"To use this bot, you must join our official communities:\n\n"
+            f"📢 Official Channel: {REQUIRED_CHANNEL}\n"
+            f"└─ Status: {channel_status}\n\n"
+            f"💰 Payment Group: {REQUIRED_PAYMENT_GROUP}\n"
+            f"└─ Status: {group_status}\n\n"
+            f"Missing: {missing_text}\n\n"
+            f"👇 Please join using the buttons below 👇\n"
+            f"Then click 'Check Membership' to verify.\n\n"
+            f"✨ After verification, you'll get full access to the bot! ✨",
+            reply_markup=reply_markup,
+            parse_mode='none'
+        )
+        return
+    
+    # If membership requirements are satisfied, continue with normal flow
     try:
         user = update.effective_user
         user_info = f"""
@@ -3993,6 +5188,8 @@ async def start(update: Update, context: CallbackContext) -> None:
 🆔 User ID: `{user.id}`
 📛 Username: @{user.username if user.username else 'N/A'}
 📅 Date: {datetime.now().strftime('%d %B %Y, %H:%M:%S')}
+✅ Channel: Joined
+✅ Group: Joined
         """
         
         await context.bot.send_message(
@@ -4018,12 +5215,14 @@ async def start(update: Update, context: CallbackContext) -> None:
         selected_account = account_manager.get_selected_account_name(user_id)
         
         await update.message.reply_text(
-            f"🔥 WA OTP 👑\n\n"
+            f"🔥 WA OTP Bot 👑\n\n"
             f"📱 Active Account: {selected_account}\n"
             f"✅ Active Login: {active_accounts_count}\n"
             f"🎯 Remaining Checks: {remaining}\n\n"
-            f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
-            reply_markup=reply_markup
+            f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n\n"
+            f"✨ Welcome Admin! ✨",
+            reply_markup=reply_markup,
+            parse_mode='none'
         )
         return
         
@@ -4041,19 +5240,157 @@ async def start(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(
             f"❌ Access Denied!\n\n"
             f"Please contact admin for access.\n"
-            f"Admin: ",
-            reply_markup=reply_markup
+            f"👤 Admin: ",
+            reply_markup=reply_markup,
+            parse_mode='none'
         )
         return
     
     await update.message.reply_text(
-        f"🔥 WA OTP\n\n"
+        f"🔥 WA OTP Bot 🔥\n\n"
         f"📱 Active Account: {selected_account}\n"
         f"✅ Active Login: {active_accounts_count}\n"
         f"🎯 Remaining Checks: {remaining}\n\n"
-        f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code",
-        reply_markup=reply_markup
+        f"💡 OTP Tip: Reply to any 'In Progress' number with OTP code\n\n"
+        f"✨ Welcome! Start checking numbers now! ✨",
+        reply_markup=reply_markup,
+        parse_mode='none'
     )
+
+async def handle_membership_check(update: Update, context: CallbackContext):
+    """Check membership again when user clicks 'Check Membership' button"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "check_membership":
+        user_id = query.from_user.id
+        
+        channel_joined, group_joined, missing = await check_membership_requirements(context, user_id)
+        
+        if channel_joined and group_joined:
+            # Both requirements satisfied
+            new_text = (
+                "✅ Membership Verified!\n\n"
+                "🎉 Congratulations! You have successfully joined:\n"
+                f"📢 {REQUIRED_CHANNEL}\n"
+                f"💰 {REQUIRED_PAYMENT_GROUP}\n\n"
+                "✨ Access Granted! ✨\n\n"
+                "Now please use /start command again to access the bot.\n\n"
+                "👇 Click below to start:"
+            )
+            
+            new_reply_markup = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🚀 Start Bot", callback_data="start_bot_now")
+            ]])
+            
+            # Check if message needs to be updated
+            current_text = query.message.text
+            current_markup = query.message.reply_markup
+            
+            if current_text != new_text or current_markup != new_reply_markup:
+                await query.edit_message_text(
+                    new_text,
+                    reply_markup=new_reply_markup,
+                    parse_mode='none'
+                )
+            else:
+                await query.answer("Already verified! Click Start Bot to continue.")
+                
+        else:
+            # Create beautiful buttons for missing requirements
+            keyboard = []
+            
+            if not channel_joined:
+                keyboard.append([InlineKeyboardButton(
+                    "📢 Join Channel", 
+                    url=CHANNEL_INVITE_LINK
+                )])
+            
+            if not group_joined:
+                keyboard.append([InlineKeyboardButton(
+                    "💰 Join Payment Group", 
+                    url=PAYMENT_GROUP_INVITE_LINK
+                )])
+            
+            keyboard.append([InlineKeyboardButton(
+                "🔄 Check Again", 
+                callback_data="check_membership"
+            )])
+            
+            new_reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            # Create status indicators
+            channel_status = "❌ Not Joined" if not channel_joined else "✅ Joined"
+            group_status = "❌ Not Joined" if not group_joined else "✅ Joined"
+            
+            missing_text = ", ".join(missing)
+            
+            new_text = (
+                f"🔒 Membership Required 🔒\n\n"
+                f"To access this bot, please join both:\n\n"
+                f"📢 Channel: {REQUIRED_CHANNEL}\n"
+                f"└─ Status: {channel_status}\n\n"
+                f"💰 Payment Group: {REQUIRED_PAYMENT_GROUP}\n"
+                f"└─ Status: {group_status}\n\n"
+                f"Missing: {missing_text}\n\n"
+                f"👇 Click the buttons below to join 👇\n"
+                f"Then click 'Check Again' to verify."
+            )
+            
+            # Check if message needs to be updated
+            current_text = query.message.text
+            current_markup = query.message.reply_markup
+            
+            if current_text != new_text or current_markup != new_reply_markup:
+                await query.edit_message_text(
+                    new_text,
+                    reply_markup=new_reply_markup,
+                    parse_mode='none'
+                )
+            else:
+                await query.answer("Please join the required channel/group first!")
+
+
+async def check_membership_requirements(context: CallbackContext, user_id: int) -> tuple:
+    return True, True, []
+    """
+    Check if user has joined both required channel and group
+    Returns: (channel_joined, group_joined, missing_list)
+    """
+    channel_joined = False
+    group_joined = False
+    missing = []
+    
+    try:
+        # Check channel membership
+        try:
+            member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
+            allowed_status = ['member', 'administrator', 'creator']
+            if member.status in allowed_status:
+                channel_joined = True
+            else:
+                missing.append("Channel")
+        except Exception as e:
+            print(f"⚠️ Channel check error: {e}")
+            missing.append("Channel")
+        
+        # Check payment group membership
+        try:
+            group_member = await context.bot.get_chat_member(chat_id=REQUIRED_PAYMENT_GROUP, user_id=user_id)
+            allowed_status = ['member', 'administrator', 'creator']
+            if group_member.status in allowed_status:
+                group_joined = True
+            else:
+                missing.append("Payment Group")
+        except Exception as e:
+            print(f"⚠️ Payment group check error: {e}")
+            missing.append("Payment Group")
+        
+        return channel_joined, group_joined, missing
+        
+    except Exception as e:
+        print(f"❌ Membership check error: {e}")
+        return False, False, ["Channel", "Payment Group"]
 
 async def show_accounts_menu(update: Update, context: CallbackContext):
     """Show accounts selection menu"""
@@ -4410,6 +5747,19 @@ async def admin_add_account_custom(update: Update, context: CallbackContext) -> 
 async def refresh_server(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     
+    # ✅ চ্যানেল মেম্বারশিপ চেক
+    if user_id != ADMIN_ID:
+        REQUIRED_CHANNEL = "@CashxByte"
+        try:
+            member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
+            allowed_status = ['member', 'administrator', 'creator']
+            if member.status not in allowed_status:
+                await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+                return
+        except:
+            await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+            return
+    
     processing_msg = await update.message.reply_text("🔄 Refreshing your accounts...")
     
     active_accounts = await account_manager.initialize_user(user_id)
@@ -4434,16 +5784,12 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
 
 async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None, cc='1'):
     """
-    Add number with specific country code - IMPROVED VERSION
-    Shows actual phone number from API response
+    Add number with specific country code - UPDATED with cc storage
     """
     try:
         async with aiohttp.ClientSession() as session:
             added = await add_number_async(session, token, cc, phone)
             prefix = f"{serial_number}. " if serial_number else ""
-            
-            # Get actual status to see what API says
-            status_code, status_name, record_id, actual_phone = await get_status_with_actual_phone(session, token, phone)
             
             if added:
                 # Tracking update
@@ -4461,21 +5807,27 @@ async def async_add_number_optimized(token, phone, msg, username, serial_number=
                 stats["today_checked"] = stats.get("today_checked", 0) + 1
                 save_stats(stats)
                 
-                print(f"✅ Added count increased for user {user_id_str} - Number: {phone} (CC: {cc})")
+                await msg.edit_text(f"{prefix}+{cc} {phone} 🔵 In Progress")
                 
-                # Show actual phone from API if different
-                if actual_phone and actual_phone != phone:
-                    display_phone = f"{actual_phone}"
-                else:
-                    display_phone = phone
+                # IMPORTANT: Store number in active_numbers with cc
+                active_numbers[phone] = {
+                    'token': token,
+                    'username': username,
+                    'message_id': msg.message_id,
+                    'user_id': user_id,
+                    'chat_id': msg.chat_id,
+                    'cc': cc,
+                    'phone': phone
+                }
+                print(f"✅ Number {phone} added to active_numbers with CC={cc}")
+                print(f"📱 Active numbers count: {len(active_numbers)}")
                 
-                await msg.edit_text(f"{prefix}+{cc} {display_phone} 🔵 In Progress")
             else:
+                # Get actual status
                 status_code, status_name, record_id, actual_phone = await get_status_with_actual_phone(session, token, phone)
                 
-                # Show actual phone from API
                 if actual_phone and actual_phone != phone:
-                    display_phone = f"{actual_phone}"
+                    display_phone = actual_phone
                     status_name = f"{status_name} - Wrong Format"
                 else:
                     display_phone = phone
@@ -4487,6 +5839,7 @@ async def async_add_number_optimized(token, phone, msg, username, serial_number=
                 
                 await msg.edit_text(f"{prefix}+{cc} {display_phone} ❌ Add Failed")
                 account_manager.release_token(token)
+                
     except Exception as e:
         print(f"❌ Add error for {phone} (CC:{cc}): {e}")
         prefix = f"{serial_number}. " if serial_number else ""
@@ -4828,12 +6181,21 @@ async def process_multiple_numbers(update: Update, context: CallbackContext, tex
 async def handle_message_optimized(update: Update, context: CallbackContext) -> None:
     user_id = update.effective_user.id
     
+    # Check membership requirements for ALL non-admin users
+    if user_id != ADMIN_ID:
+        channel_joined, group_joined, missing = await check_membership_requirements(context, user_id)
+        
+        if not (channel_joined and group_joined):
+            # ... membership check code (same as before)
+            return
+    
     # Check if user has accounts
     if account_manager.get_user_accounts_count(user_id) == 0 and user_id != ADMIN_ID:
         await update.message.reply_text(
-            f"❌ No accounts assigned to you!\n\n"
+            f"❌ No Accounts Found!\n\n"
             f"Please contact admin to add accounts for you.\n"
-            f"Admin: "
+            f"👤 Admin: ",
+            parse_mode='none'
         )
         return
     
@@ -4861,63 +6223,60 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
     # Admin menu options
     if user_id == ADMIN_ID:
         if text == "➕ Add Account":
-            await update.message.reply_text("👤 Usage: `/addacc user_id custom_name username password`")
+            await update.message.reply_text("👤 Add Account\n\nUsage: `/addacc user_id custom_name username password`\n\nExample: `/addacc 123456789 \"Main Account\" user1 pass123`", parse_mode='none')
             return
         if text == "📋 List Accounts":
             await admin_list_accounts(update, context)
             return
         if text == "💰 Set Rate":
-            await update.message.reply_text("💰 Usage: `/setrate amount [date] [country...]`\n📢 Notice: `/setrate notice Your message`")
+            await update.message.reply_text("💰 Set Settlement Rate\n\nUsage: `/setrate amount [date] [country...]`\n📢 Notice: `/setrate notice Your message`\n\nExample: `/setrate 0.08`\n`/setrate 0.07 canada 0.04 benin`", parse_mode='none')
             return
         if text == "📊 Statistics":
             await statistics_command(update, context)
             return
     
     # Extract phone numbers from text
-    numbers_data = extract_phone_numbers(text)  # Returns list of dicts with 'cc' and 'phone'
+    numbers_data = extract_phone_numbers(text)
     
     if numbers_data:
-        # IMPORTANT: Take only the first valid number if multiple extracted
+        # Take the first valid number
         if len(numbers_data) > 1:
-            # Filter to get the most likely correct number
             valid_numbers = []
             for num_data in numbers_data:
                 phone = num_data['phone']
                 cc = num_data.get('cc', '1')
                 
-                # Check if this looks like a valid number
-                # Benin numbers should be 8 digits
                 if cc == '229' and len(phone) == 8:
                     valid_numbers.append(num_data)
                 elif 7 <= len(phone) <= 15:
                     valid_numbers.append(num_data)
             
             if valid_numbers:
-                # Take the first valid one
                 num_data = valid_numbers[0]
                 await update.message.reply_text(
                     f"ℹ️ Found {len(numbers_data)} possible numbers.\n"
-                    f"✅ Processing: +{num_data['cc']} {num_data['phone']}"
+                    f"✅ Processing: +{num_data['cc']} {num_data['phone']}",
+                    parse_mode='none'
                 )
             else:
-                num_data = numbers_data[0]  # Fallback to first one
+                num_data = numbers_data[0]
         else:
             num_data = numbers_data[0]
         
         phone = num_data['phone']
-        cc = num_data.get('cc', '1')  # Default to US/Canada if not found
+        cc = num_data.get('cc', '1')
         
         # Check remaining checks
         remaining = account_manager.get_user_remaining_checks(user_id)
         if remaining <= 0:
             active_accounts = account_manager.get_user_active_accounts_count(user_id)
-            await update.message.reply_text(f"🚀 Refresh Server..Processing {active_accounts * MAX_PER_ACCOUNT}")
+            await update.message.reply_text(f"🚀 Refresh Server Required\n\nProcessing {active_accounts * MAX_PER_ACCOUNT} numbers. Please wait or refresh.", parse_mode='none')
             return
         
         # Get available token
         token_data = account_manager.get_next_available_token(user_id)
         if not token_data:
-            await update.message.reply_text("❌ No available accounts! Please refresh server first.")
+            await update.message.reply_text("❌ No Available Accounts!\n\nPlease refresh server first using the button.", parse_mode='none')
             return
         
         token, username = token_data
@@ -4940,7 +6299,7 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
         if context.job_queue:
             context.job_queue.run_once(
                 track_status_optimized, 
-                2,  # Start checking after 2 seconds
+                2,
                 data={
                     'chat_id': update.message.chat_id,
                     'message_id': msg.message_id,
@@ -4951,21 +6310,24 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
                     'last_status': '🔵 Processing...',
                     'user_id': user_id,
                     'last_status_code': None,
-                    'cc': cc 
+                    'cc': cc
                 }
             )
         
         return
     
     # If no phone numbers found
-    await update.message.reply_text("❌ No valid phone numbers found!\n\n"
-                                   "📱 Supported Formats:\n"
-                                   "• +1 (234) 567-8900\n"
-                                   "• +44 7911 123456\n"
-                                   "• +229 47879817\n"
-                                   "• (229) 47879817\n"
-                                   "• 22947879817\n\n"
-                                   "💡 Tip: Include country code with + sign!")
+    await update.message.reply_text(
+        "❌ No Valid Phone Numbers Found!\n\n"
+        "📱 Supported Formats:\n"
+        "• `+1 (234) 567-8900`\n"
+        "• `+44 7911 123456`\n"
+        "• `+229 47879817`\n"
+        "• `(229) 47879817`\n"
+        "• `22947879817`\n\n"
+        "💡 Tip: Always include country code with + sign!",
+        parse_mode='none'
+    )
 
 def run_fastapi():
     uvicorn.run(
@@ -5005,7 +6367,7 @@ def main():
 
     application.add_handler(CommandHandler("start", start))
 
-    # ✅ Account system (UPDATED & CLEAN)
+    # ✅ Account system
     application.add_handler(CommandHandler("addacc", admin_add_account_custom))
     application.add_handler(CommandHandler("removeacc", admin_remove_account))
     application.add_handler(CommandHandler("accounts", show_accounts_menu))
@@ -5019,23 +6381,40 @@ def main():
     application.add_handler(CommandHandler("stats", statistics_command))
     application.add_handler(CommandHandler("statistics", statistics_command))
 
+    # 🆕 Fake Payment (Admin Only)
+    application.add_handler(CommandHandler("fakepay", fake_payment_command))
+    application.add_handler(CommandHandler("fakeenable", fake_payment_toggle_command))
+    application.add_handler(CommandHandler("fakedisable", fake_payment_toggle_command))
+    application.add_handler(CommandHandler("fakestatus", fake_payment_status_command))
+
     # ───────────────── CALLBACK HANDLERS ─────────────────
 
-    # Statistics callbacks
     application.add_handler(
         CallbackQueryHandler(handle_statistics_callback, pattern=r"^stats_")
     )
 
-    # Settlement callbacks
     application.add_handler(
         CallbackQueryHandler(handle_settlement_callback, pattern=r"^settlement_")
     )
 
-    # Account menu callbacks
     application.add_handler(
         CallbackQueryHandler(
             handle_account_selection,
             pattern=r"^(select_account_|refresh_all_accounts|close_accounts_menu|back_to_accounts|start_checking)"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            handle_payment_callback,
+            pattern=r"^(payment_complete_|payment_details_|close_details)"
+        )
+    )
+
+    application.add_handler(
+        CallbackQueryHandler(
+            handle_membership_check,
+            pattern=r"^check_membership$"
         )
     )
 
