@@ -6668,6 +6668,7 @@ async def handle_membership_check(update: Update, context: CallbackContext):
 
 
 async def check_membership_requirements(context: CallbackContext, user_id: int) -> tuple:
+    return True, True, []
     """
     Check if user has joined both required channel and group
     Returns: (channel_joined, group_joined, missing_list)
