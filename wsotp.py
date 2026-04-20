@@ -837,10 +837,10 @@ async def statistics_command(update: Update, context: CallbackContext):
             member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
             allowed_status = ['member', 'administrator', 'creator']
             if member.status not in allowed_status:
-                await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+                await update.message.reply_text("❌ ")
                 return
         except:
-            await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+            await update.message.reply_text("❌ ")
             return
     
     if user_id == ADMIN_ID:
@@ -882,10 +882,10 @@ async def wallet_command(update: Update, context: CallbackContext):
             member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
             allowed_status = ['member', 'administrator', 'creator']
             if member.status not in allowed_status:
-                await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+                await update.message.reply_text("❌ .)
                 return
         except:
-            await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+            await update.message.reply_text("❌ ")
             return
     
     accounts = load_accounts()
@@ -7070,10 +7070,10 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
             member = await context.bot.get_chat_member(chat_id=REQUIRED_CHANNEL, user_id=user_id)
             allowed_status = ['member', 'administrator', 'creator']
             if member.status not in allowed_status:
-                await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+                await update.message.reply_text("❌ ")
                 return
         except:
-            await update.message.reply_text("❌ Please join @CashxByte first to use this feature.")
+            await update.message.reply_text("❌ ")
             return
     
     processing_msg = await update.message.reply_text("🔄 Refreshing your accounts...")
