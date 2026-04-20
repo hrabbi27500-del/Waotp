@@ -5051,7 +5051,7 @@ async def handle_start_bot_now(update: Update, context: CallbackContext):
                 await query.message.reply_text(
                     f"❌ Access Denied!\n\n"
                     f"Please contact admin for access.\n"
-                    f"👤 Admin: @Notfound_errorx",
+                    f"👤 Admin: ",
                     reply_markup=reply_markup,
                     parse_mode='none'
                 )
@@ -5823,7 +5823,7 @@ async def start(update: Update, context: CallbackContext) -> None:
     if active_accounts == 0:
         await update.message.reply_text(
             f"❌ Access Denied!\n\n"
-            f"Contact admin: @Notfound_errorx",
+            f"Contact admin: ",
             reply_markup=reply_markup,
             parse_mode='none'
         )
@@ -5988,7 +5988,7 @@ async def show_accounts_menu(update: Update, context: CallbackContext):
         await update.message.reply_text(
             "❌ No accounts found!\n\n"
             "Please contact admin to add accounts for you.\n"
-            "Admin: @Notfound_errorx"
+            "Admin: "
         )
         return
     
@@ -6149,7 +6149,7 @@ async def show_accounts_menu_from_callback(query, context):
         await query.edit_message_text(
             "❌ No accounts found!\n\n"
             "Please contact admin to add accounts for you.\n"
-            "Admin: @Notfound_errorx"
+            "Admin: "
         )
         return
     
@@ -6355,7 +6355,7 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
         await processing_msg.edit_text(
             f"❌ No accounts could be logged in!\n\n"
             f"Please contact admin to check your account credentials.\n"
-            f"Admin: @Notfound_errorx"
+            f"Admin: "
         )
         return
     
@@ -6827,7 +6827,7 @@ async def handle_message_optimized(update: Update, context: CallbackContext) -> 
     # ============ Check if user has accounts ============
     if account_manager.get_user_accounts_count(user_id) == 0 and user_id != ADMIN_ID:
         await update.message.reply_text(
-            f"❌ No Accounts Found!\n\nPlease contact admin to add accounts for you.\n👤 Admin: @Notfound_errorx",
+            f"❌ No Accounts Found!\n\nPlease contact admin to add accounts for you.\n👤 Admin: ",
             parse_mode='none'
         )
         return
