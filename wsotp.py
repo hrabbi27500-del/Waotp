@@ -41,7 +41,7 @@ logger = logging.getLogger(__name__)
 from dotenv import load_dotenv
 load_dotenv()
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8556655471:AAGrrDgV5zDcrXgiKbHf7K_udjNR-P4Ufb4")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "5624278091"))
 BASE_URL = os.environ.get("BASE_URL", "http://8.222.182.223:8081")
 
