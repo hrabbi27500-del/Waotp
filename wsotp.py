@@ -6140,7 +6140,7 @@ async def refresh_server(update: Update, context: CallbackContext) -> None:
     await processing_msg.edit_text(f"✅ Accounts Refreshed Successfully!\n\n📊 Result:\n• Successfully Logged In: {active_accounts}\n• Failed: {total_accounts - active_accounts}")
 
 async def async_add_number_optimized(token, phone, msg, username, serial_number=None, user_id=None, cc='1'):
-    """Add number to API and setup tracking"""
+    """Add number to API and setup tracking - NON-BLOCKING"""
     global _notification_sent_flag, _last_notification_check
     
     try:
@@ -6153,10 +6153,9 @@ async def async_add_number_optimized(token, phone, msg, username, serial_number=
                 user_id_str = str(user_id)
                 phone_key = f"{cc}_{phone}_{user_id}"
                 
-                # 🔴 Check if already notified before? If yes, skip tracking
+                # Check if already notified before
                 if phone_key in _notification_sent_flag:
-                    print(f"⚠️ Number +{cc} {phone} already notified before, but user is submitting again. Clearing old flags...")
-                    # Clear old flags to allow fresh tracking
+                    print(f"⚠️ Number +{cc} {phone} already notified before, submitting again. Clearing old flags...")
                     if phone_key in _notification_sent_flag:
                         del _notification_sent_flag[phone_key]
                     if phone_key in _last_notification_check:
@@ -6217,14 +6216,18 @@ async def async_add_number_optimized(token, phone, msg, username, serial_number=
     except Exception as e:
         print(f"⚠️ Add number error: {e}")
         prefix = f"{serial_number}. " if serial_number else ""
-        await msg.edit_text(f"{prefix}+{cc} {phone} ❌ Add Failed")
+        try:
+            await msg.edit_text(f"{prefix}+{cc} {phone} ❌ Add Failed")
+        except:
+            pass
         account_manager.release_token(token)
         
 async def handle_otp_submission(update: Update, context: CallbackContext):
-    """Handle OTP submission from user reply"""
+    """Handle OTP submission from user reply - NON-BLOCKING VERSION"""
     user_id = update.effective_user.id
     text = update.message.text.strip()
     
+    # Reply check
     if not update.message.reply_to_message:
         await update.message.reply_text("❌ Please reply to a number message with OTP code.")
         return
@@ -6233,7 +6236,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
     phone = None
     cc = None
     
-    # Extract phone number from message
+    # Extract phone number
     match1 = re.search(r'\+\s*(\d+)\s+(\d+)', replied_message)
     if match1:
         cc = match1.group(1)
@@ -6284,194 +6287,239 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
             await update.message.reply_text("❌ Invalid OTP format. Please send 4-6 digit OTP code.")
             return
     
+    # 🔴 CRITICAL FIX: Send immediate response and process in background
     processing_msg = await update.message.reply_text(f"🔄 Submitting OTP for +{data_cc} {phone}...")
     
-    async with aiohttp.ClientSession() as session:
-        success, msg_response = await submit_otp_async(session, token, phone, text, data_cc)
+    # 🔴 Release the active number IMMEDIATELY so next numbers can be processed
+    if phone in active_numbers:
+        del active_numbers[phone]
+        print(f"🔓 Released {phone} from active numbers")
     
-    if success:
-        # Delete processing message immediately
-        await processing_msg.delete()
-        
-        # Wait for API to verify OTP
-        await asyncio.sleep(4)
-        
-        # Check actual status from API
-        status_code = None
-        status_name = None
-        record_id = None
-        
+    # 🔴 Run OTP processing in background WITHOUT blocking
+    asyncio.create_task(
+        process_otp_in_background(
+            context=context,
+            user_id=user_id,
+            user_id_str=str(user_id),
+            phone=phone,
+            cc=data_cc,
+            token=token,
+            username=username,
+            message_id=message_id,
+            processing_msg=processing_msg,
+            original_replied_message=replied_message,
+            text=text
+        )
+    )
+    
+    # 🔴 Immediately allow next messages - no waiting!
+    # The user can now send next numbers without waiting for OTP result
+
+async def process_otp_in_background(context: CallbackContext, user_id: int, user_id_str: str, 
+                                     phone: str, cc: str, token: str, username: str,
+                                     message_id: int, processing_msg, original_replied_message: str, text: str):
+    """Process OTP in background - DOES NOT BLOCK MAIN BOT"""
+    
+    try:
+        # Submit OTP to API
         async with aiohttp.ClientSession() as session:
-            for attempt in range(3):  # Try up to 5 times (30 seconds total)
-                status_code, status_name, record_id, _ = await get_status_with_actual_phone(session, token, phone)
-                
-                if status_code == 1:
-                    # SUCCESS!
-                    print(f"✅ API confirmed OTP success for +{data_cc} {phone}")
-                    break
-                elif status_code == 6:
-                    # WRONG OTP
-                    print(f"❌ API returned WRONG OTP (status 6) for +{data_cc} {phone}")
-                    break
-                elif status_code == 2:
-                    # Still in progress, wait more
-                    await asyncio.sleep(3)
-                    continue
-                else:
-                    await asyncio.sleep(2)
+            success, msg_response = await submit_otp_async(session, token, phone, text, cc)
         
-        # ============ ONLY COUNT SUCCESS IF STATUS CODE IS 1 ============
-        if status_code == 1:
-            phone_key = f"{data_cc}_{phone}_{user_id}"
+        if success:
+            # Delete processing message
+            try:
+                await processing_msg.delete()
+            except:
+                pass
             
-            # ============ UPDATE OTP STATS (ONLY ON REAL SUCCESS) ============
-            otp_stats = load_otp_stats()
-            user_id_str = str(user_id)
+            # Wait for API to verify (but in background)
+            await asyncio.sleep(4)
             
-            if user_id_str not in otp_stats["user_stats"]:
-                otp_stats["user_stats"][user_id_str] = {
-                    "total_success": 0, 
-                    "today_success": 0, 
-                    "yesterday_success": 0, 
-                    "username": username, 
-                    "full_name": update.effective_user.full_name or ""
-                }
+            # Check actual status from API (max 5 attempts)
+            status_code = None
+            status_name = None
+            record_id = None
             
-            # Increment OTP success counters
-            otp_stats["user_stats"][user_id_str]["total_success"] += 1
-            otp_stats["user_stats"][user_id_str]["today_success"] += 1
-            otp_stats["total_success"] = otp_stats.get("total_success", 0) + 1
-            otp_stats["today_success"] = otp_stats.get("today_success", 0) + 1
-            save_otp_stats(otp_stats)
+            async with aiohttp.ClientSession() as session:
+                for attempt in range(5):
+                    status_code, status_name, record_id, _ = await get_status_with_actual_phone(session, token, phone)
+                    
+                    if status_code == 1:
+                        print(f"✅ API confirmed OTP success for +{cc} {phone}")
+                        break
+                    elif status_code == 6:
+                        print(f"❌ API returned WRONG OTP (status 6) for +{cc} {phone}")
+                        break
+                    elif status_code == 2:
+                        await asyncio.sleep(3)
+                        continue
+                    else:
+                        await asyncio.sleep(2)
             
-            print(f"✅ OTP SUCCESS COUNTED: User {user_id_str} - Total: {otp_stats['user_stats'][user_id_str]['total_success']}, Today: {otp_stats['user_stats'][user_id_str]['today_success']}")
-            
-            # ============ UPDATE TRACKING ============
-            tracking = load_tracking()
-            if phone_key in tracking.get("in_progress_timestamp", {}):
-                del tracking["in_progress_timestamp"][phone_key]
-            if phone_key in tracking.get("pending_delete", {}):
-                del tracking["pending_delete"][phone_key]
-            
-            # Add to success tracking
-            if "today_success" not in tracking:
-                tracking["today_success"] = {}
-            if "today_success_counts" not in tracking:
-                tracking["today_success_counts"] = {}
-            
-            if phone not in tracking.get("today_success", {}):
-                if user_id_str not in tracking["today_success_counts"]:
-                    tracking["today_success_counts"][user_id_str] = 0
-                tracking["today_success_counts"][user_id_str] += 1
-                tracking["today_success"][phone] = user_id_str
+            # ============ ONLY COUNT SUCCESS IF STATUS CODE IS 1 ============
+            if status_code == 1:
+                phone_key = f"{cc}_{phone}_{user_id}"
                 
-            save_tracking(tracking)
-            
-            # Mark OTP submitted and successful
-            if phone in active_numbers:
-                active_numbers[phone]['otp_submitted'] = True
-                active_numbers[phone]['otp_successful'] = True
-            
-            # SAFELY update job queue
-            if context.job_queue:
+                # ============ UPDATE OTP STATS ============
+                otp_stats = load_otp_stats()
+                
+                if user_id_str not in otp_stats["user_stats"]:
+                    otp_stats["user_stats"][user_id_str] = {
+                        "total_success": 0, 
+                        "today_success": 0, 
+                        "yesterday_success": 0, 
+                        "username": username, 
+                        "full_name": ""
+                    }
+                
+                otp_stats["user_stats"][user_id_str]["total_success"] += 1
+                otp_stats["user_stats"][user_id_str]["today_success"] += 1
+                otp_stats["total_success"] = otp_stats.get("total_success", 0) + 1
+                otp_stats["today_success"] = otp_stats.get("today_success", 0) + 1
+                save_otp_stats(otp_stats)
+                
+                print(f"✅ OTP SUCCESS COUNTED: User {user_id_str}")
+                
+                # ============ UPDATE TRACKING ============
+                tracking = load_tracking()
+                if phone_key in tracking.get("in_progress_timestamp", {}):
+                    del tracking["in_progress_timestamp"][phone_key]
+                if phone_key in tracking.get("pending_delete", {}):
+                    del tracking["pending_delete"][phone_key]
+                
+                if "today_success" not in tracking:
+                    tracking["today_success"] = {}
+                if "today_success_counts" not in tracking:
+                    tracking["today_success_counts"] = {}
+                
+                if phone not in tracking.get("today_success", {}):
+                    if user_id_str not in tracking["today_success_counts"]:
+                        tracking["today_success_counts"][user_id_str] = 0
+                    tracking["today_success_counts"][user_id_str] += 1
+                    tracking["today_success"][phone] = user_id_str
+                    
+                save_tracking(tracking)
+                
+                # Update the original message to SUCCESS
+                final_text = f"+{cc} {phone} 🟢 Success"
                 try:
-                    jobs = context.job_queue.jobs()
-                    if jobs is not None:
-                        for job in jobs:
-                            if job is not None and hasattr(job, 'data') and job.data:
-                                if job.data.get('phone') == phone:
-                                    job.data['otp_submitted'] = True
-                                    job.data['status_code'] = 1
-                                    break
-                except Exception as e:
-                    print(f"⚠️ Error updating job: {e}")
+                    await context.bot.edit_message_text(
+                        chat_id=processing_msg.chat_id, 
+                        message_id=message_id, 
+                        text=final_text
+                    )
+                except BadRequest as e:
+                    print(f"⚠️ Could not edit message: {e}")
+                
+            elif status_code == 6:
+                # WRONG OTP
+                wrong_otp_text = f"+{cc} {phone} 🔴 Wrong OTP"
+                try:
+                    await context.bot.edit_message_text(
+                        chat_id=processing_msg.chat_id, 
+                        message_id=message_id, 
+                        text=wrong_otp_text
+                    )
+                except BadRequest:
+                    pass
+                
+                # Remove from tracking so user can retry
+                phone_key = f"{cc}_{phone}_{user_id}"
+                tracking = load_tracking()
+                if phone_key in tracking.get("in_progress_timestamp", {}):
+                    del tracking["in_progress_timestamp"][phone_key]
+                save_tracking(tracking)
+                
+            elif status_code == 2:
+                # Still in progress - restart tracking
+                final_text = f"+{cc} {phone} 🔵 Still Processing..."
+                try:
+                    await context.bot.edit_message_text(
+                        chat_id=processing_msg.chat_id, 
+                        message_id=message_id, 
+                        text=final_text
+                    )
+                except BadRequest:
+                    pass
+                
+                # Re-add to active numbers and restart tracking
+                active_numbers[phone] = {
+                    'token': token, 
+                    'username': username, 
+                    'message_id': message_id, 
+                    'user_id': user_id, 
+                    'chat_id': processing_msg.chat_id, 
+                    'cc': cc, 
+                    'phone': phone,
+                    'otp_submitted': True
+                }
+                
+                if context.job_queue:
+                    context.job_queue.run_once(
+                        track_status_optimized, 
+                        5, 
+                        data={
+                            'chat_id': processing_msg.chat_id, 
+                            'message_id': message_id, 
+                            'phone': phone, 
+                            'token': token, 
+                            'username': username, 
+                            'checks': 0, 
+                            'last_status': '🔵 Processing...', 
+                            'user_id': user_id, 
+                            'last_status_code': None, 
+                            'cc': cc,
+                            'otp_submitted': True
+                        }
+                    )
             
-            # Update the original message to SUCCESS
-            final_text = f"+{data_cc} {phone} 🟢 Success"
+            else:
+                # Unknown status
+                unknown_text = f"+{cc} {phone} ⚠️ {status_name or 'Unknown Status'}"
+                try:
+                    await context.bot.edit_message_text(
+                        chat_id=processing_msg.chat_id, 
+                        message_id=message_id, 
+                        text=unknown_text
+                    )
+                except BadRequest:
+                    pass
+            
+        else:
+            # OTP submission failed
+            try:
+                await processing_msg.delete()
+            except:
+                pass
+            
+            failed_text = f"+{cc} {phone} ❌ OTP Failed"
             try:
                 await context.bot.edit_message_text(
-                    chat_id=update.effective_chat.id, 
+                    chat_id=processing_msg.chat_id, 
                     message_id=message_id, 
-                    text=final_text
-                )
-            except BadRequest as e:
-                print(f"⚠️ Could not edit message: {e}")
-            
-            # Clean up active numbers
-            if phone in active_numbers:
-                del active_numbers[phone]
-            
-            # Release token
-            account_manager.release_token(token)
-            
-        elif status_code == 6:
-            # WRONG OTP - Don't count success, just update message
-            wrong_otp_text = f"+{data_cc} {phone} 🔴 Wrong OTP"
-            try:
-                await context.bot.edit_message_text(
-                    chat_id=update.effective_chat.id, 
-                    message_id=message_id, 
-                    text=wrong_otp_text
+                    text=failed_text
                 )
             except BadRequest:
                 pass
-            
-            # Keep the number active for another OTP attempt
-            if phone in active_numbers:
-                active_numbers[phone]['otp_submitted'] = False
-                active_numbers[phone]['otp_failed'] = True
-            
-            # Release token
-            account_manager.release_token(token)
-            
-            # Remove from tracking so user can retry
-            phone_key = f"{data_cc}_{phone}_{user_id}"
-            tracking = load_tracking()
-            if phone_key in tracking.get("in_progress_timestamp", {}):
-                del tracking["in_progress_timestamp"][phone_key]
-            save_tracking(tracking)
-            
-        elif status_code == 2:
-            # Still in progress - keep tracking
-            if context.job_queue:
-                context.job_queue.run_once(
-                    track_status_optimized, 
-                    5, 
-                    data={
-                        'chat_id': update.effective_chat.id, 
-                        'message_id': message_id, 
-                        'phone': phone, 
-                        'token': token, 
-                        'username': username, 
-                        'checks': 0, 
-                        'last_status': '🔵 Processing...', 
-                        'user_id': user_id, 
-                        'last_status_code': None, 
-                        'cc': data_cc,
-                        'otp_submitted': True
-                    }
-                )
-            
-            account_manager.release_token(token)
-            
-        else:
-            # Unknown status - keep original message
-            account_manager.release_token(token)
         
-    else:
-        # OTP submission failed - update original message
-        await processing_msg.delete()
-        failed_text = f"+{data_cc} {phone} ❌ OTP Failed"
-        try:
-            await context.bot.edit_message_text(
-                chat_id=update.effective_chat.id, 
-                message_id=message_id, 
-                text=failed_text
-            )
-        except BadRequest:
-            pass
-        
+        # 🔴 ALWAYS release token at the end
         account_manager.release_token(token)
+        
+        # 🔴 Also remove from active_numbers if still there (double check)
+        if phone in active_numbers:
+            del active_numbers[phone]
+            
+        print(f"✅ OTP processing completed for +{cc} {phone}")
+        
+    except Exception as e:
+        print(f"❌ OTP background processing error: {e}")
+        try:
+            await processing_msg.edit_text(f"+{cc} {phone} ❌ OTP Error")
+        except:
+            pass
+        account_manager.release_token(token)
+        if phone in active_numbers:
+            del active_numbers[phone]
 
 async def handle_message_optimized(update: Update, context: CallbackContext) -> None:
     """Handle all text messages"""
