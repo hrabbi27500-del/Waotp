@@ -1537,7 +1537,7 @@ async def login_api_async(username, password):
     try:
         async with aiohttp.ClientSession() as session:
             payload = {"account": username, "password": password, "identity": "Member"}
-            async with session.post(f"{BASE_URL}/user/login", json=payload, timeout=30) as response:
+            async with session.post(f"{BASE_URL}/user/login", json=payload, timeout=10) as response:
                 if response.status == 200:
                     try:
                         data = await response.json(content_type=None)
@@ -2516,7 +2516,7 @@ def extract_phone_numbers(text: str) -> List[Dict[str, str]]:
     
     return unique_numbers
 
-async def add_number_async(session, token, cc, phone, retry_count=2):
+async def add_number_async(session, token, cc, phone, retry_count=1):
     for attempt in range(retry_count):
         try:
             headers = {"Admin-Token": token}
@@ -2611,7 +2611,7 @@ async def get_user_settlements(session, token, user_id, page=1, page_size=50):  
         
         print(f"🔍 Fetching settlements: user={user_id}, page={page}, size={page_size}")
         
-        async with session.get(url, headers=headers, timeout=30) as response:
+        async with session.get(url, headers=headers, timeout=10) as response:
             if response.status == 200:
                 try:
                     result = await response.json(content_type=None)
@@ -3803,7 +3803,7 @@ async def show_user_settlements(update: Update, context: CallbackContext):
             pass
     processing_msg = await update.message.reply_text("🔄 Loading your settlement records...")
     async with aiohttp.ClientSession() as session:
-        data, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=5)
+        data, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=20)
     if error:
         await processing_msg.edit_text(f"❌ Error loading settlements: {error}")
         return
@@ -5736,7 +5736,7 @@ async def handle_settlement_callback(update: Update, context: CallbackContext):
             await query.edit_message_text("❌ Could not find your API user ID.\n\nPlease refresh your accounts by clicking '🚀 Refresh Server' button first.")
             return
         async with aiohttp.ClientSession() as session:
-            data_result, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=5)
+            data_result, error = await get_user_settlements(session, token, str(api_user_id), page=page, page_size=20)
         if error:
             await query.edit_message_text(f"❌ Error loading settlements: {error}")
             return
@@ -6294,7 +6294,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
         await processing_msg.delete()
         
         # Wait for API to verify OTP
-        await asyncio.sleep(6)
+        await asyncio.sleep(4)
         
         # Check actual status from API
         status_code = None
@@ -6302,7 +6302,7 @@ async def handle_otp_submission(update: Update, context: CallbackContext):
         record_id = None
         
         async with aiohttp.ClientSession() as session:
-            for attempt in range(5):  # Try up to 5 times (30 seconds total)
+            for attempt in range(3):  # Try up to 5 times (30 seconds total)
                 status_code, status_name, record_id, _ = await get_status_with_actual_phone(session, token, phone)
                 
                 if status_code == 1:
