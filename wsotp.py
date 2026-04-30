@@ -30,6 +30,7 @@ load_dotenv()  # .env ফাইল থেকে লোড করবে
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 ADMIN_ID = int(os.environ.get("ADMIN_ID", "5624278091"))
 GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL", "")
+PORT = int(os.environ.get("PORT", 10000))
 
 print(f"📱 Bot Token: ✅")
 print(f"👑 Admin ID: {ADMIN_ID}")
@@ -1521,7 +1522,33 @@ async def price_list_command(update: Update, context: CallbackContext):
     await show_price_list(update, context, user)
 
 # ==================== MAIN ====================
+import threading
+import asyncio
+from fastapi import FastAPI
+import uvicorn
+
+# ==================== FASTAPI SETUP ====================
+app_fastapi = FastAPI()
+
+@app_fastapi.get("/")
+async def root():
+    return {"status": "active", "message": "Bot is running"}
+
+@app_fastapi.get("/health")
+async def health():
+    return {"status": "healthy"}
+
+def run_fastapi():
+    """Run FastAPI on configured port"""
+    uvicorn.run(app_fastapi, host="0.0.0.0", port=PORT, access_log=False)
+
+# ==================== MAIN FUNCTION ====================
 def main():
+    # Start FastAPI in background thread
+    fastapi_thread = threading.Thread(target=run_fastapi, daemon=True)
+    fastapi_thread.start()
+    print(f"✅ FastAPI server started on port {PORT}")
+    
     def reset_checker():
         while True:
             check_and_reset_daily()
@@ -1539,20 +1566,20 @@ def main():
     app.add_handler(CommandHandler("price", price_list_command))
     app.add_handler(CommandHandler("menu", menu_keyboard))
 
-# Download commands
+    # Download commands
     app.add_handler(CommandHandler("mystats", my_stats_command))
     app.add_handler(CommandHandler("mybalance", my_balance_command))
     app.add_handler(CommandHandler("myhistory", my_history_command))
     app.add_handler(CommandHandler("mysheet", my_sheet_command))
     app.add_handler(CommandHandler("download", download_my_sheet))
 
-# Admin commands
+    # Admin commands
     app.add_handler(CommandHandler("addrate", add_rate))
     app.add_handler(CommandHandler("removerate", remove_rate))
     app.add_handler(CommandHandler("listrates", list_rates))
     app.add_handler(CommandHandler("saverates", save_rates))
 
-# Message handler
+    # Message handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_buttons))
     
     # Message handler - checks for menu buttons first
@@ -1564,10 +1591,10 @@ def main():
     print("📊 Statistics reset daily at 4 PM BD time")
     print("🌍 Dynamic country rates with admin commands")
     print("📱 Menu keyboard with 5 buttons")
+    print(f"🚀 FastAPI on port: {PORT}")
     print("="*60 + "\n")
     
     app.run_polling()
-    asyncio.create_task(keep_alive_enhanced())
 
 if __name__ == "__main__":
     main()
