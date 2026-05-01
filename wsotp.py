@@ -101,7 +101,7 @@ COUNTRY_RATES = {
 # ==================== COUNTRY APIS ====================
 COUNTRY_APIS = {
     # ===== YOUR EXISTING ENTRIES (kept as-is) =====
-    "11": {"cc": "11", "display_cc": "1", "country": "Canada", "base_url": "http://8.222.182.223:8081", "username": "HasanCAA", "password": "HasanCAA"},
+    "11": {"cc": "11", "display_cc": "11", "country": "Canada", "base_url": "http://8.222.182.223:8081", "username": "HasanCAA", "password": "HasanCAA"},
     "52": {"cc": "52", "display_cc": "52", "country": "Mexico", "base_url": "http://8.222.182.223:8081", "username": "Hasan42MX", "password": "Hasan42MX"},
     "44": {"cc": "44", "display_cc": "44", "country": "UK", "base_url": "http://8.222.182.223:8081", "username": "Hasan42GB", "password": "Hasan42GB"},
     "49": {"cc": "49", "display_cc": "49", "country": "Germany", "base_url": "http://8.222.182.223:8081", "username": "Hasan42DE", "password": "Hasan42DE"},
@@ -1295,7 +1295,7 @@ def extract_number(text):
     
     if cleaned.startswith('1') and len(cleaned) == 11:
         print(f"   ✅ Detected: Canada (CC: 11)")
-        return "11", cleaned[1:], "1"
+        return "11", cleaned[1:], "11"
     
     if cleaned.startswith('964') and len(cleaned) >= 13:
         print(f"   ✅ Detected: Iraq (CC: 964)")
