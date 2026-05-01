@@ -101,7 +101,7 @@ COUNTRY_RATES = {
 # ==================== COUNTRY APIS ====================
 COUNTRY_APIS = {
     # ===== YOUR EXISTING ENTRIES (kept as-is) =====
-    "11": {"cc": "11", "display_cc": "11", "country": "Canada", "base_url": "http://8.222.182.223:8081", "username": "HasanCAA", "password": "HasanCAA"},
+    "11": {"cc": "11", "display_cc": "1", "country": "Canada", "base_url": "http://8.222.182.223:8081", "username": "HasanCAA", "password": "HasanCAA"},
     "52": {"cc": "52", "display_cc": "52", "country": "Mexico", "base_url": "http://8.222.182.223:8081", "username": "Hasan42MX", "password": "Hasan42MX"},
     "44": {"cc": "44", "display_cc": "44", "country": "UK", "base_url": "http://8.222.182.223:8081", "username": "Hasan42GB", "password": "Hasan42GB"},
     "49": {"cc": "49", "display_cc": "49", "country": "Germany", "base_url": "http://8.222.182.223:8081", "username": "Hasan42DE", "password": "Hasan42DE"},
@@ -339,7 +339,6 @@ COUNTRY_APIS = {
     "380": {"cc": "380", "display_cc": "380", "country": "Ukraine", "base_url": "http://8.222.182.223:8081", "username": "Hasan42UA", "password": "Hasan42UA"},
     "971": {"cc": "971", "display_cc": "971", "country": "UAE", "base_url": "http://8.222.182.223:8081", "username": "Hasan42AE", "password": "Hasan42AE"},
     "44": {"cc": "44", "display_cc": "44", "country": "United Kingdom", "base_url": "http://8.222.182.223:8081", "username": "Hasan42GB", "password": "Hasan42GB"},
-    "1": {"cc": "1", "display_cc": "1", "country": "United States", "base_url": "http://8.222.182.223:8081", "username": "Hasan42US", "password": "Hasan42US"},
     "598": {"cc": "598", "display_cc": "598", "country": "Uruguay", "base_url": "http://8.222.182.223:8081", "username": "Hasan42UY", "password": "Hasan42UY"},
     "998": {"cc": "998", "display_cc": "998", "country": "Uzbekistan", "base_url": "http://8.222.182.223:8081", "username": "Hasan42UZ", "password": "Hasan42UZ"},
     "678": {"cc": "678", "display_cc": "678", "country": "Vanuatu", "base_url": "http://8.222.182.223:8081", "username": "Hasan42VU", "password": "Hasan42VU"},
@@ -1295,7 +1294,7 @@ def extract_number(text):
     
     if cleaned.startswith('1') and len(cleaned) == 11:
         print(f"   ✅ Detected: Canada (CC: 11)")
-        return "11", cleaned[1:], "11"
+        return "11", cleaned[1:], "1"
     
     if cleaned.startswith('964') and len(cleaned) >= 13:
         print(f"   ✅ Detected: Iraq (CC: 964)")
