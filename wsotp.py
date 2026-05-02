@@ -1378,7 +1378,9 @@ def run_fastapi():
 
 # ==================== MAIN ====================
 def main():
-    threading.Thread(target=run_fastapi, daemon=True).start()
+    # Start FastAPI
+    fastapi_thread = threading.Thread(target=run_fastapi, daemon=True)
+    fastapi_thread.start()
     print(f"✅ FastAPI: port {PORT}")
     
     app_bot = Application.builder().token(BOT_TOKEN).build()
@@ -1399,8 +1401,11 @@ def main():
     # Messages
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
     
-    # Start cleanup task
-    asyncio.get_event_loop().create_task(cleanup_task())
+    # Start cleanup task using post_init
+    async def post_init(app):
+        asyncio.create_task(cleanup_task())
+    
+    app_bot.post_init = post_init
     
     print("\n" + "="*60)
     print("✅ BOT v3.1 STABLE RUNNING")
@@ -1408,7 +1413,9 @@ def main():
     print(f"🔑 Reply-based OTP (correct matching)")
     print(f"🛡️ Copy-on-write (no race conditions)")
     print(f"🧹 Auto memory cleanup")
-    print("✅ ALL 10 BUGS FIXED")
+    print(f"📢 Admin notifications: ON")
+    print(f"📤 Sheet deduplication: ON")
+    print("✅ ALL SYSTEMS READY")
     print("="*60 + "\n")
     
     app_bot.run_polling()
