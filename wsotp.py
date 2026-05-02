@@ -469,28 +469,30 @@ async def process_single_number(update, context, user, api_cc, phone, display_cc
             phone, api_cc, display_cc, user.id, user.username, user.full_name, country, token
         ))
 
-# ==================== TRACKING FUNCTION (OPTIMIZED) ====================
+# ==================== TRACKING FUNCTION (FIXED AUTO-DELETE) ====================
 async def track_number_status(context, chat_id, message_id, phone, api_cc, display_cc, user_id, username, full_name, country, token):
     display = f"+{display_cc} {phone}"
     start_time = datetime.now()
     max_duration = 180
-    check_interval = 2  # Increased from 1 to reduce API calls
+    check_interval = 3  # Check every 3 seconds
     
     config = COUNTRY_APIS.get(api_cc)
     check_count = 0
     last_status = None
     stuck_start_time = None
     last_update_time = 0
+    delete_attempted = False  # Track if delete already tried
     
+    # যেসব স্ট্যাটাসে অটো ডিলিট হবে
     auto_delete_statuses = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     
     while True:
         elapsed = (datetime.now() - start_time).total_seconds()
         remaining = max_duration - elapsed
-        current_time = int(elapsed)
         
-        # Update display every 5 seconds to reduce API calls
-        if current_time > last_update_time and current_time % 5 == 0:
+        # Update display every 10 seconds
+        current_time = int(elapsed)
+        if current_time > last_update_time and current_time % 10 == 0:
             last_update_time = current_time
             try:
                 if last_status == 2 or last_status is None:
@@ -502,11 +504,15 @@ async def track_number_status(context, chat_id, message_id, phone, api_cc, displ
             except:
                 pass
         
+        # ৩ মিনিট পার হলে
         if elapsed >= max_duration:
             print(f"   ⏰ TIMEOUT: {display} (Status: {last_status})")
             
-            if last_status == 2:
+            # Stuck hole delete koro
+            if last_status == 2 and not delete_attempted:
+                print(f"   🗑️ Stuck timeout - deleting: {display}")
                 await delete_number_from_api(api_cc, phone, token, 2)
+                delete_attempted = True
             
             try:
                 await context.bot.edit_message_text(
@@ -536,91 +542,152 @@ async def track_number_status(context, chat_id, message_id, phone, api_cc, displ
                             record = data["data"]["records"][0]
                             status_code = record.get("registrationStatus")
                             
-                            if status_code == 1:
-                                status_text = "✅ SUCCESS"
-                            elif status_code == 2:
-                                status_text = "🟡 IN PROGRESS"
-                            elif status_code == 4:
-                                status_text = "❌ NOT REGISTERED"
-                            elif status_code == 6:
-                                status_text = "🔴 WRONG OTP"
-                            else:
-                                status_text = f"❌ {status_code}"
+                            # Status text mapping
+                            status_map = {
+                                0: "🟡 PROCESSING",
+                                1: "✅ SUCCESS", 
+                                2: "🟡 IN PROGRESS",
+                                3: "❌ ERROR",
+                                4: "❌ NOT REGISTERED",
+                                5: "❌ FAILED",
+                                6: "🔴 WRONG OTP",
+                                7: "❌ ERROR",
+                                8: "❌ ERROR",
+                                9: "❌ ERROR",
+                                10: "❌ ERROR",
+                                11: "❌ ERROR",
+                                12: "❌ ERROR",
+                                13: "❌ ERROR",
+                                14: "❌ ERROR",
+                                15: "❌ ERROR",
+                                16: "❌ ERROR"
+                            }
+                            status_text = status_map.get(status_code, f"❌ {status_code}")
                             
+                            # Status change detect
                             if status_code != last_status:
                                 check_count += 1
-                                print(f"   🔍 #{check_count}: {display} → {status_text}")
+                                print(f"   🔍 #{check_count}: {display} → {status_text} (Code: {status_code})")
+                                
+                                if status_code == 2:
+                                    if stuck_start_time is None:
+                                        stuck_start_time = datetime.now()
+                                else:
+                                    stuck_start_time = None
+                                
                                 last_status = status_code
-                            
-                            # SUCCESS
-                            if status_code == 1:
-                                await context.bot.edit_message_text(
-                                    chat_id=chat_id,
-                                    message_id=message_id,
-                                    text=f"✅ {display} 🟢 SUCCESS"
-                                )
                                 
-                                is_otp = False
-                                otp_code = None
-                                with active_numbers_lock:
-                                    if phone in active_numbers:
-                                        is_otp = active_numbers[phone].get('otp_submitted', False)
-                                        otp_code = active_numbers[phone].get('otp_code')
-                                
-                                if is_otp and otp_code:
-                                    rate = COUNTRY_RATES.get(api_cc, {}).get("rate", 0)
-                                    if rate > 0:
-                                        new_balance = add_earning_to_balance(user_id, api_cc, rate)
-                                        save_msg = f"OTP Verified - Earned ${rate:.2f}"
-                                        update_daily_stats(user_id, "OTP_VERIFIED", api_cc)
-                                        
-                                        try:
-                                            await context.bot.send_message(
-                                                chat_id=user_id,
-                                                text=f"💰 OTP Verified!\n📞 {display}\n🌎 {country}\n💵 Earning: ${rate:.2f}\n🏦 Total Balance: ${new_balance:.2f}"
-                                            )
-                                        except:
-                                            pass
+                                # ===== SUCCESS =====
+                                if status_code == 1:
+                                    print(f"   ✅ SUCCESS: {display}")
+                                    await context.bot.edit_message_text(
+                                        chat_id=chat_id,
+                                        message_id=message_id,
+                                        text=f"✅ {display} 🟢 SUCCESS"
+                                    )
+                                    
+                                    is_otp = False
+                                    otp_code = None
+                                    with active_numbers_lock:
+                                        if phone in active_numbers:
+                                            is_otp = active_numbers[phone].get('otp_submitted', False)
+                                            otp_code = active_numbers[phone].get('otp_code')
+                                    
+                                    if is_otp and otp_code:
+                                        rate = COUNTRY_RATES.get(api_cc, {}).get("rate", 0)
+                                        if rate > 0:
+                                            new_balance = add_earning_to_balance(user_id, api_cc, rate)
+                                            save_msg = f"OTP Verified - Earned ${rate:.2f}"
+                                            update_daily_stats(user_id, "OTP_VERIFIED", api_cc)
+                                            
+                                            try:
+                                                await context.bot.send_message(
+                                                    chat_id=user_id,
+                                                    text=f"💰 OTP Verified!\n📞 {display}\n🌎 {country}\n💵 Earning: ${rate:.2f}\n🏦 Total Balance: ${new_balance:.2f}"
+                                                )
+                                            except:
+                                                pass
+                                        else:
+                                            save_msg = "OTP Verified (No rate set)"
+                                            update_daily_stats(user_id, "OTP_VERIFIED", api_cc)
                                     else:
-                                        save_msg = "OTP Verified (No rate set)"
-                                        update_daily_stats(user_id, "OTP_VERIFIED", api_cc)
-                                else:
-                                    save_msg = "Verified (No OTP)"
-                                    update_daily_stats(user_id, "SUCCESS")
+                                        save_msg = "Verified (No OTP)"
+                                        update_daily_stats(user_id, "SUCCESS")
+                                    
+                                    save_to_sheet(user_id, username, full_name, phone, api_cc, country, "SUCCESS", save_msg, otp_code)
+                                    
+                                    with active_numbers_lock:
+                                        if phone in active_numbers:
+                                            del active_numbers[phone]
+                                    return
                                 
-                                save_to_sheet(user_id, username, full_name, phone, api_cc, country, "SUCCESS", save_msg, otp_code)
-                                
-                                with active_numbers_lock:
-                                    if phone in active_numbers:
-                                        del active_numbers[phone]
-                                return
+                                # ===== AUTO-DELETE STATUSES =====
+                                elif status_code in auto_delete_statuses and not delete_attempted:
+                                    print(f"   🗑️ Auto-delete triggered: {display} (Status: {status_code})")
+                                    delete_attempted = True
+                                    
+                                    # Delete from API
+                                    await delete_number_from_api(api_cc, phone, token, status_code)
+                                    
+                                    # Update message
+                                    try:
+                                        await context.bot.edit_message_text(
+                                            chat_id=chat_id,
+                                            message_id=message_id,
+                                            text=f"❌ {display}\n{status_text}"
+                                        )
+                                    except:
+                                        pass
+                                    
+                                    # Save to sheet
+                                    if status_code == 4:
+                                        save_msg = "Not Registered"
+                                    elif status_code == 6:
+                                        save_msg = "Wrong OTP"
+                                    elif status_code == 5:
+                                        save_msg = "Failed"
+                                    else:
+                                        save_msg = f"Failed (Status {status_code})"
+                                    
+                                    otp_val = None
+                                    with active_numbers_lock:
+                                        if phone in active_numbers:
+                                            otp_val = active_numbers[phone].get('otp_code')
+                                            del active_numbers[phone]
+                                    
+                                    save_to_sheet(user_id, username, full_name, phone, api_cc, country, "FAILED", save_msg, otp_val)
+                                    update_daily_stats(user_id, "FAILED")
+                                    return
                             
-                            # Auto-delete statuses
-                            elif status_code in auto_delete_statuses:
-                                await delete_number_from_api(api_cc, phone, token, status_code)
-                                
-                                await context.bot.edit_message_text(
-                                    chat_id=chat_id,
-                                    message_id=message_id,
-                                    text=f"❌ {display}\n{status_text}"
-                                )
-                                
-                                if status_code == 4:
-                                    save_msg = "Not Registered"
-                                elif status_code == 6:
-                                    save_msg = "Wrong OTP"
-                                else:
-                                    save_msg = status_text
-                                
-                                otp_val = None
-                                with active_numbers_lock:
-                                    if phone in active_numbers:
-                                        otp_val = active_numbers[phone].get('otp_code')
-                                        del active_numbers[phone]
-                                
-                                save_to_sheet(user_id, username, full_name, phone, api_cc, country, "FAILED", save_msg, otp_val)
-                                update_daily_stats(user_id, "FAILED")
-                                return
+                            # Stuck detection
+                            if status_code == 2 and stuck_start_time is not None:
+                                stuck_duration = (datetime.now() - stuck_start_time).total_seconds()
+                                if stuck_duration >= 120 and not delete_attempted:
+                                    print(f"   ⏰ STUCK 2min: {display} - Deleting...")
+                                    delete_attempted = True
+                                    await delete_number_from_api(api_cc, phone, token, 2)
+                                    
+                                    try:
+                                        await context.bot.edit_message_text(
+                                            chat_id=chat_id,
+                                            message_id=message_id,
+                                            text=f"⏰ {display} Stuck - Deleted"
+                                        )
+                                    except:
+                                        pass
+                                    
+                                    with active_numbers_lock:
+                                        if phone in active_numbers:
+                                            del active_numbers[phone]
+                                    
+                                    try:
+                                        await context.bot.send_message(
+                                            chat_id=user_id,
+                                            text=f"😕 {display}\n⏰ Number was stuck for 2 minutes\n✅ Deleted automatically\n🔄 Try again"
+                                        )
+                                    except:
+                                        pass
+                                    return
         
         except Exception as e:
             print(f"   ⚠️ Tracking error: {display}: {e}")
@@ -655,7 +722,9 @@ async def login_api(cc):
         return None
 
 async def delete_number_from_api(cc, phone, token, status_code):
+    """Delete number from API - DON'T delete if status_code is 1 (SUCCESS)"""
     if status_code == 1:
+        print(f"   🛡️ PROTECTED: +{cc} {phone} is SUCCESS, will NOT delete")
         return False
     
     config = COUNTRY_APIS.get(cc)
@@ -666,6 +735,8 @@ async def delete_number_from_api(cc, phone, token, status_code):
         await rate_limit_api(cc)
         async with aiohttp.ClientSession() as session:
             headers = {"Admin-Token": token}
+            
+            # Get number details
             url = f"{config['base_url']}/z-number-base/getAullNum?page=1&pageSize=15&phoneNum={phone}"
             async with session.get(url, headers=headers, timeout=10) as response:
                 if response.status == 200:
@@ -675,7 +746,9 @@ async def delete_number_from_api(cc, phone, token, status_code):
                         record_id = record.get("id")
                         current_status = record.get("registrationStatus")
                         
+                        # DOUBLE CHECK: Don't delete if status is 1
                         if current_status == 1:
+                            print(f"   🛡️ DOUBLE CHECK: Record {record_id} is SUCCESS, skipping delete")
                             return False
                         
                         if record_id and record_id > 0:
@@ -683,9 +756,14 @@ async def delete_number_from_api(cc, phone, token, status_code):
                             delete_url = f"{config['base_url']}/z-number-base/deleteNum/{record_id}"
                             async with session.delete(delete_url, headers=headers, timeout=10) as del_response:
                                 if del_response.status == 200:
+                                    print(f"   🗑️ DELETED: +{cc} {phone} (Status: {status_code})")
                                     return True
+                                else:
+                                    print(f"   ❌ Delete failed: HTTP {del_response.status}")
+                                    return False
         return False
-    except:
+    except Exception as e:
+        print(f"   ⚠️ Delete error: {e}")
         return False
 
 # ==================== TELEGRAM HANDLERS ====================
