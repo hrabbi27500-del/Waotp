@@ -1962,10 +1962,6 @@ def main():
     fastapi_thread.start()
     print(f"✅ FastAPI server started on port {PORT}")
     
-    # Start keep-alive
-    async def start_keep_alive():
-        asyncio.create_task(keep_alive_enhanced())
-    
     # Reset checker
     def reset_checker():
         while True:
@@ -2003,11 +1999,6 @@ def main():
     # Message handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_buttons))
     
-    # Start background workers
-    loop = asyncio.get_event_loop()
-    loop.create_task(processing_worker())
-    loop.create_task(otp_worker())
-    
     print("\n" + "="*60)
     print("✅ BOT RUNNING - ALL SYSTEMS ACTIVE")
     print("="*60)
@@ -2023,7 +2014,16 @@ def main():
     print(f"🚀 FastAPI port: {PORT}")
     print("="*60 + "\n")
     
+    # Start background workers
+    app.post_init = start_background_workers
+    
     app.run_polling()
+
+async def start_background_workers(app):
+    """Start background workers after app is initialized"""
+    asyncio.create_task(processing_worker())
+    asyncio.create_task(otp_worker())
+    print("✅ Background workers started")
 
 if __name__ == "__main__":
     main()
