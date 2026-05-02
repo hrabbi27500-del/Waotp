@@ -1712,9 +1712,6 @@ def main():
     # Message handler
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu_buttons))
     
-    # Start background worker
-    asyncio.get_event_loop().create_task(processing_worker())
-    
     print("\n✅ BOT RUNNING!")
     print("⏱️ Max tracking: 3 minutes per number")
     print("💰 Earnings only for OTP verified")
@@ -1724,6 +1721,12 @@ def main():
     print(f"⚡ Concurrent support: Up to {GLOBAL_MAX_CONCURRENT} simultaneous requests")
     print(f"🚀 FastAPI on port: {PORT}")
     print("="*60 + "\n")
+    
+    # Start background worker using app's event loop
+    async def start_workers(application):
+        asyncio.create_task(processing_worker())
+    
+    app.post_init = start_workers
     
     app.run_polling()
 
