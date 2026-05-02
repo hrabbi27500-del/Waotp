@@ -13,7 +13,7 @@ load_dotenv()
 
 # ==================== CONFIG (ALL FROM ENV) ====================
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+ADMIN_ID = int(os.environ.get("ADMIN_ID", "5624278091"))
 GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL", "")
 PORT = int(os.environ.get("PORT", "10000"))
 bd_tz = pytz.timezone('Asia/Dhaka')
@@ -430,7 +430,7 @@ async def track_number(bot, chat_id, msg_id, phone, cc, dc, user_id, uname, fnam
                             f"📞 *Number:* {display}\n"
                             f"🌍 *Country:* {country}\n"
                             f"💰 *Amount:* ${rate:.2f}\n"
-                            f"🔖 *Tag:* #{user_id}_{get_bd_hashtage()}"
+                            f"🔖 *Tag:* #{user_id}_{get_bd_hashtag()}"
                         )
                         try:
                             await bot.send_message(ADMIN_ID, admin_msg, parse_mode='Markdown')
