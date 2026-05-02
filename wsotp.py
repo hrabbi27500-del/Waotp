@@ -763,6 +763,120 @@ async def start(update: Update, context: CallbackContext):
     
     await update.message.reply_text(welcome_msg, parse_mode='Markdown', reply_markup=reply_markup)
 
+# ==================== ADD THESE BEFORE main() FUNCTION ====================
+
+async def add_rate(update: Update, context: CallbackContext):
+    """Admin command to add/update country rate"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args or len(context.args) < 2:
+        await update.message.reply_text(
+            "📝 *Usage:* `/addrate cc amount`\n\n"
+            "Example:\n"
+            "• `/addrate 880 0.15` - Set Bangladesh rate to $0.15\n"
+            "• `/addrate 966 0.45` - Set Saudi Arabia rate to $0.45",
+            parse_mode='Markdown'
+        )
+        return
+    
+    cc = context.args[0]
+    try:
+        amount = float(context.args[1])
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount! Use number like 0.15")
+        return
+    
+    if cc in COUNTRY_APIS:
+        country_name = COUNTRY_APIS[cc]["country"]
+        
+        if cc in COUNTRY_RATES:
+            COUNTRY_RATES[cc]["rate"] = amount
+            await update.message.reply_text(
+                f"✅ Rate updated!\n\n"
+                f"🇨🇨 {country_name}\n"
+                f"💰 New rate: ${amount:.2f} per OTP"
+            )
+        else:
+            COUNTRY_RATES[cc] = {
+                "country": country_name,
+                "rate": amount,
+                "flag": "🌍",
+                "cc": cc
+            }
+            await update.message.reply_text(
+                f"✅ New country added!\n\n"
+                f"🇨🇨 {country_name}\n"
+                f"💰 Rate: ${amount:.2f} per OTP"
+            )
+        
+        save_rate_to_sheet()
+    else:
+        await update.message.reply_text(f"❌ Country code `{cc}` not found in API list!", parse_mode='Markdown')
+
+async def remove_rate(update: Update, context: CallbackContext):
+    """Admin command to remove country rate"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args:
+        await update.message.reply_text(
+            "📝 *Usage:* `/removerate cc`\n\n"
+            "Example: `/removerate 880`",
+            parse_mode='Markdown'
+        )
+        return
+    
+    cc = context.args[0]
+    
+    if cc in COUNTRY_RATES:
+        country_name = COUNTRY_RATES[cc]["country"]
+        del COUNTRY_RATES[cc]
+        await update.message.reply_text(f"✅ Rate removed for {country_name}!")
+        save_rate_to_sheet()
+    else:
+        await update.message.reply_text(f"❌ Country code `{cc}` not found in rate list!", parse_mode='Markdown')
+
+async def list_rates(update: Update, context: CallbackContext):
+    """Admin command to list all rates"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not COUNTRY_RATES:
+        await update.message.reply_text("No rates configured yet.")
+        return
+    
+    sorted_rates = sorted(COUNTRY_RATES.items(), key=lambda x: x[1]["rate"], reverse=True)
+    
+    rate_text = "📊 *Current Rates*\n\n"
+    for cc, data in sorted_rates:
+        rate_text += f"{data['flag']} {data['country'][:15]} (CC: {cc}) - ${data['rate']:.2f}\n"
+    
+    rate_text += f"\n📊 Total: {len(COUNTRY_RATES)} countries"
+    
+    await update.message.reply_text(rate_text, parse_mode='Markdown')
+
+async def save_rates(update: Update, context: CallbackContext):
+    """Admin command to save rates to sheet"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    save_rate_to_sheet()
+    await update.message.reply_text("✅ Rates saved to Google Sheet!")
+
+
 async def handle_message(update: Update, context: CallbackContext):
     user = update.effective_user
     text = update.message.text.strip()
