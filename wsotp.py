@@ -13,7 +13,7 @@ load_dotenv()
 
 # ==================== CONFIG (ALL FROM ENV) ====================
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ADMIN_ID = int(os.environ.get("ADMIN_ID", "0"))
+ADMIN_ID = int(os.environ.get("ADMIN_ID", ""))
 GOOGLE_SHEET_URL = os.environ.get("GOOGLE_SHEET_URL", "")
 PORT = int(os.environ.get("PORT", "10000"))
 bd_tz = pytz.timezone('Asia/Dhaka')
