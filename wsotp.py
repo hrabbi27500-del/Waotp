@@ -1006,6 +1006,7 @@ def run_fastapi():
     uvicorn.run(app, host="0.0.0.0", port=PORT, access_log=False)
 
 # ==================== MAIN ====================
+# ==================== MAIN ====================
 def main():
     threading.Thread(target=run_fastapi, daemon=True).start()
     print(f"✅ FastAPI: port {PORT}")
@@ -1028,8 +1029,16 @@ def main():
     # Messages
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
     
-    # Start cleanup task
-    asyncio.get_event_loop().create_task(cleanup_task())
+    # Start cleanup task - FIXED for Python 3.14
+    try:
+        # Try to get existing loop
+        loop = asyncio.get_running_loop()
+        loop.create_task(cleanup_task())
+    except RuntimeError:
+        # No running loop, create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(cleanup_task())
     
     print("\n" + "="*60)
     print("✅ BOT v3.1 STABLE RUNNING")
