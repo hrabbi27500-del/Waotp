@@ -999,7 +999,7 @@ async def start(update, context):
         f"🔑 Reply to number msg with OTP\n"
         f"💡 Example: `+9647803260789`\n\n"
         f"💰 Earn after OTP verification!\n"
-        f"💸 Withdraw min $0.50",
+        f"💸 Withdraw min ${MIN_WITHDRAW:.2f}",
         reply_markup=ReplyKeyboardMarkup(kb, resize_keyboard=True),
         parse_mode='Markdown'
     )
@@ -1068,7 +1068,7 @@ async def menu_handler(update, context):
     
     elif t == "💰 Balance":
         bal = get_balance(user.id)
-        await update.message.reply_text(f"💰 *Balance: ${bal:.2f}*\n{'✅ Can withdraw!' if bal >= 0.5 else 'Min: $0.50'}", parse_mode='Markdown')
+        await update.message.reply_text(f"💰 *Balance: ${bal:.2f}*\n{'✅ Can withdraw!' if bal >= MIN_WITHDRAW else f'Min: ${MIN_WITHDRAW:.2f}'}", parse_mode='Markdown')
     
     elif t == "💸 Withdraw":
         await withdraw_request(update, context)
@@ -1086,7 +1086,7 @@ async def menu_handler(update, context):
         await update.message.reply_text(f"📢 {REQUIRED_CHANNEL}\n👑 Admin: {ADMIN_ID}")
     
     elif t == "📸 Payment":
-        await update.message.reply_text("💰 Min: $0.50\nDaily: 1 time\nMethods: bKash/Nagad/Binance")
+        await update.message.reply_text(f"💰 Min: ${MIN_WITHDRAW:.2f}\nDaily: 1 time\nMethods: bKash/Nagad/Binance")
     
     elif t == "👛 Wallet":
         await wallet_show(update, context)
@@ -1580,8 +1580,8 @@ async def withdraw_request(update, context):
         return
     
     bal = get_balance(user.id)
-    if bal < 0.5:
-        await update.message.reply_text(f"❌ Min $0.50! Balance: ${bal:.2f}")
+    if bal < MIN_WITHDRAW:
+        await update.message.reply_text(f"❌ Min ${MIN_WITHDRAW:.2f}! Balance: ${bal:.2f}")
         return
     
     kb = []
