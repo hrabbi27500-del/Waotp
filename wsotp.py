@@ -1147,10 +1147,9 @@ def run_fastapi():
     uvicorn.run(app, host="0.0.0.0", port=PORT, access_log=False)
 
 # ==================== MAIN ====================
+# ==================== MAIN ====================
 def main():
-    # Start FastAPI
-    fastapi_thread = threading.Thread(target=run_fastapi, daemon=True)
-    fastapi_thread.start()
+    threading.Thread(target=run_fastapi, daemon=True).start()
     print(f"✅ FastAPI: port {PORT}")
     
     app_bot = Application.builder().token(BOT_TOKEN).build()
@@ -1163,7 +1162,7 @@ def main():
     app_bot.add_handler(CommandHandler("myhistory", cmd_myhistory))
     app_bot.add_handler(CommandHandler("mysheet", cmd_mysheet))
     
-    # ADMIN RATE COMMANDS - ADD THESE
+    # Admin Rate Commands
     app_bot.add_handler(CommandHandler("addrate", cmd_addrate))
     app_bot.add_handler(CommandHandler("removerate", cmd_removerate))
     app_bot.add_handler(CommandHandler("listrates", cmd_listrates))
@@ -1177,11 +1176,16 @@ def main():
     # Messages
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
     
-    # Start cleanup task using post_init
-    async def post_init(app):
-        asyncio.create_task(cleanup_task())
-    
-    app_bot.post_init = post_init
+    # Start cleanup task - FIXED for Python 3.14
+    try:
+        # Try to get existing loop
+        loop = asyncio.get_running_loop()
+        loop.create_task(cleanup_task())
+    except RuntimeError:
+        # No running loop, create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(cleanup_task())
     
     print("\n" + "="*60)
     print("✅ BOT v3.1 STABLE RUNNING")
@@ -1189,10 +1193,10 @@ def main():
     print(f"🔑 Reply-based OTP (correct matching)")
     print(f"🛡️ Copy-on-write (no race conditions)")
     print(f"🧹 Auto memory cleanup")
-    print(f"📢 Admin notifications: ON")
-    print(f"📤 Sheet deduplication: ON")
-    print(f"💰 Rate management: /addrate /removerate /listrates")
-    print("✅ ALL SYSTEMS READY")
+    print(f"💰 Admin: /addrate /removerate /listrates /saverates")
     print("="*60 + "\n")
     
     app_bot.run_polling()
+
+if __name__ == "__main__":
+    main()
