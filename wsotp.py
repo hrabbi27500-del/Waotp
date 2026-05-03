@@ -823,8 +823,8 @@ async def withdraw_request(update, context):
         return
     
     bal = get_balance(user.id)
-    if bal < 0.5:
-        await update.message.reply_text(f"❌ Min $0.50! Balance: ${bal:.2f}")
+    if bal < 0.1:
+        await update.message.reply_text(f"❌ Min $0.10! Balance: ${bal:.2f}")
         return
     
     kb = []
@@ -955,6 +955,147 @@ async def admin_withdraw_action(update, context):
         except:
             pass
 
+# ==================== ADMIN RATE MANAGEMENT ====================
+async def cmd_addrate(update, context):
+    """Admin: Add/Update rate | Usage: /addrate cc amount"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args or len(context.args) < 2:
+        await update.message.reply_text(
+            "📝 *Usage:* `/addrate cc amount`\n\n"
+            "Example:\n"
+            "• `/addrate 880 0.15` - Set Bangladesh rate\n"
+            "• `/addrate 966 0.45` - Set Saudi rate",
+            parse_mode='Markdown'
+        )
+        return
+    
+    cc = context.args[0].strip()
+    try:
+        amount = float(context.args[1])
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount! Use number like 0.15")
+        return
+    
+    if cc in COUNTRY_APIS:
+        country_name = COUNTRY_APIS[cc]["country"]
+        flag = COUNTRY_RATES.get(cc, {}).get("flag", "🌍")
+        
+        COUNTRY_RATES[cc] = {
+            "country": country_name,
+            "rate": amount,
+            "flag": flag,
+            "cc": cc
+        }
+        
+        await update.message.reply_text(
+            f"✅ *Rate Updated!*\n\n"
+            f"🇨🇨 {flag} {country_name}\n"
+            f"💰 New Rate: ${amount:.2f} per OTP",
+            parse_mode='Markdown'
+        )
+        
+        # Save rates to sheet
+        save_rates_to_sheet()
+        
+        print(f"   📊 Rate updated: {cc} ({country_name}) = ${amount:.2f}")
+    else:
+        await update.message.reply_text(f"❌ Country code `{cc}` not found in API list!")
+
+async def cmd_removerate(update, context):
+    """Admin: Remove rate | Usage: /removerate cc"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args:
+        await update.message.reply_text("📝 *Usage:* `/removerate cc`\nExample: `/removerate 880`", parse_mode='Markdown')
+        return
+    
+    cc = context.args[0].strip()
+    
+    if cc in COUNTRY_RATES:
+        country_name = COUNTRY_RATES[cc]["country"]
+        del COUNTRY_RATES[cc]
+        
+        await update.message.reply_text(
+            f"✅ *Rate Removed!*\n\n"
+            f"🇨🇨 {country_name} removed from price list",
+            parse_mode='Markdown'
+        )
+        
+        save_rates_to_sheet()
+        print(f"   🗑️ Rate removed: {cc} ({country_name})")
+    else:
+        await update.message.reply_text(f"❌ Country code `{cc}` not found in rate list!")
+
+async def cmd_listrates(update, context):
+    """Admin: List all rates | Usage: /listrates"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not COUNTRY_RATES:
+        await update.message.reply_text("❌ No rates configured!\nUse /addrate to add countries.")
+        return
+    
+    sorted_rates = sorted(COUNTRY_RATES.items(), key=lambda x: x[1]["rate"], reverse=True)
+    
+    rate_text = "📊 *Current Rates (Admin View)*\n\n"
+    rate_text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    rate_text += "🇨🇨 *Country*        *CC*    *Rate*\n"
+    rate_text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    
+    for cc, data in sorted_rates:
+        flag = data.get("flag", "🌍")
+        country = data["country"][:15]
+        rate = data["rate"]
+        rate_text += f"{flag} {country:<15} `{cc:<4}` 💵 ${rate:.2f}\n"
+    
+    rate_text += "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+    rate_text += f"📊 Total countries: *{len(COUNTRY_RATES)}*"
+    
+    await update.message.reply_text(rate_text, parse_mode='Markdown')
+
+async def cmd_saverates(update, context):
+    """Admin: Save rates to sheet | Usage: /saverates"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    save_rates_to_sheet()
+    await update.message.reply_text("✅ All rates saved to Google Sheet!")
+
+def save_rates_to_sheet():
+    """Save all rates to Google Sheet"""
+    rates_data = []
+    for cc, data in COUNTRY_RATES.items():
+        rates_data.append({
+            "cc": cc,
+            "country": data["country"],
+            "rate": data["rate"],
+            "flag": data.get("flag", "🌍"),
+            "timestamp": datetime.now(bd_tz).strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    payload = {
+        "type": "rates_update",
+        "data": rates_data,
+        "timestamp": datetime.now(bd_tz).strftime('%Y-%m-%d %H:%M:%S')
+    }
+    sheet_queue.append(payload)
+    print(f"   📤 Rates saved to sheet: {len(rates_data)} countries")
+
 # ==================== DOWNLOAD ====================
 async def cmd_mystats(update, context):
     uid, bal = str(update.effective_user.id), get_balance(update.effective_user.id)
@@ -1006,9 +1147,10 @@ def run_fastapi():
     uvicorn.run(app, host="0.0.0.0", port=PORT, access_log=False)
 
 # ==================== MAIN ====================
-# ==================== MAIN ====================
 def main():
-    threading.Thread(target=run_fastapi, daemon=True).start()
+    # Start FastAPI
+    fastapi_thread = threading.Thread(target=run_fastapi, daemon=True)
+    fastapi_thread.start()
     print(f"✅ FastAPI: port {PORT}")
     
     app_bot = Application.builder().token(BOT_TOKEN).build()
@@ -1021,6 +1163,12 @@ def main():
     app_bot.add_handler(CommandHandler("myhistory", cmd_myhistory))
     app_bot.add_handler(CommandHandler("mysheet", cmd_mysheet))
     
+    # ADMIN RATE COMMANDS - ADD THESE
+    app_bot.add_handler(CommandHandler("addrate", cmd_addrate))
+    app_bot.add_handler(CommandHandler("removerate", cmd_removerate))
+    app_bot.add_handler(CommandHandler("listrates", cmd_listrates))
+    app_bot.add_handler(CommandHandler("saverates", cmd_saverates))
+    
     # Callbacks
     app_bot.add_handler(CallbackQueryHandler(wallet_callback, pattern="^w_"))
     app_bot.add_handler(CallbackQueryHandler(withdraw_callback, pattern="^wd_"))
@@ -1029,16 +1177,11 @@ def main():
     # Messages
     app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_msg))
     
-    # Start cleanup task - FIXED for Python 3.14
-    try:
-        # Try to get existing loop
-        loop = asyncio.get_running_loop()
-        loop.create_task(cleanup_task())
-    except RuntimeError:
-        # No running loop, create one
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.create_task(cleanup_task())
+    # Start cleanup task using post_init
+    async def post_init(app):
+        asyncio.create_task(cleanup_task())
+    
+    app_bot.post_init = post_init
     
     print("\n" + "="*60)
     print("✅ BOT v3.1 STABLE RUNNING")
@@ -1046,9 +1189,10 @@ def main():
     print(f"🔑 Reply-based OTP (correct matching)")
     print(f"🛡️ Copy-on-write (no race conditions)")
     print(f"🧹 Auto memory cleanup")
+    print(f"📢 Admin notifications: ON")
+    print(f"📤 Sheet deduplication: ON")
+    print(f"💰 Rate management: /addrate /removerate /listrates")
+    print("✅ ALL SYSTEMS READY")
     print("="*60 + "\n")
     
     app_bot.run_polling()
-
-if __name__ == "__main__":
-    main()
