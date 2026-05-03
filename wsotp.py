@@ -1695,13 +1695,14 @@ def run_fastapi():
     uvicorn.run(app, host="0.0.0.0", port=PORT, access_log=False)
 
 # ==================== MAIN ====================
+ # ==================== MAIN ====================
 def main():
     threading.Thread(target=run_fastapi, daemon=True).start()
     print(f"✅ FastAPI: port {PORT}")
     
     app_bot = Application.builder().token(BOT_TOKEN).build()
     
-    # Commands
+    # User Commands
     app_bot.add_handler(CommandHandler("start", start))
     app_bot.add_handler(CommandHandler("wallet", wallet_setup))
     app_bot.add_handler(CommandHandler("mystats", cmd_mystats))
@@ -1715,7 +1716,7 @@ def main():
     app_bot.add_handler(CommandHandler("listrates", cmd_listrates))
     app_bot.add_handler(CommandHandler("saverates", cmd_saverates))
     
-    # Admin Balance Commands - ADD THESE 5 LINES
+    # Admin Balance Commands
     app_bot.add_handler(CommandHandler("addbalance", cmd_addbalance))
     app_bot.add_handler(CommandHandler("removebalance", cmd_removebalance))
     app_bot.add_handler(CommandHandler("checkbalance", cmd_checkbalance))
@@ -1743,8 +1744,14 @@ def main():
     print("✅ BOT v3.1 STABLE RUNNING")
     print(f"📱 Max {MAX_ACTIVE_NUMBERS} numbers/user")
     print(f"🔑 Reply-based OTP (correct matching)")
-    print(f"💰 Min withdraw: ${MIN_WITHDRAW:.2f}")
-    print(f"👑 Admin commands: addbalance removebalance checkbalance setminwithdraw allbalances")
+    print(f"🛡️ Copy-on-write (no race conditions)")
+    print(f"🧹 Auto memory cleanup")
+    print(f"💰 Admin: /addrate /removerate /listrates")
+    print(f"💵 Admin: /addbalance /removebalance /checkbalance")
+    print(f"⚙️ Admin: /setminwithdraw /allbalances")
     print("="*60 + "\n")
     
     app_bot.run_polling()
+
+if __name__ == "__main__":
+    main()
