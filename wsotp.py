@@ -699,7 +699,7 @@ async def track_number(bot, chat_id, msg_id, phone, cc, dc, user_id, uname, fnam
                         
                         # ========== FIX 3: Admin notification for OTP success ==========
                         admin_msg = (
-                            f"✅ *TP VERIFIED SUCCESS\n\n"
+                            f"✅ OTP VERIFIED SUCCESS\n\n"
                             f"👤 Name: {fname}\n"
                             f"🆔 Username: @{uname if uname else 'N/A'}\n"
                             f"📞 Number: {display}\n"
