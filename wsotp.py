@@ -1370,6 +1370,280 @@ def save_rates_to_sheet():
     sheet_queue.append(payload)
     print(f"   📤 Rates saved to sheet: {len(rates_data)} countries")
 
+# ==================== ADMIN BALANCE & WITHDRAWAL MANAGEMENT ====================
+
+# Store minimum withdrawal (default $0.50)
+MIN_WITHDRAW = 0.50
+
+async def cmd_addbalance(update, context):
+    """Admin: Add balance to any user | Usage: /addbalance user_id amount"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args or len(context.args) < 2:
+        await update.message.reply_text(
+            "📝 *Usage:* `/addbalance user_id amount`\n\n"
+            "Example:\n"
+            "• `/addbalance 7015259172 5.00` - Add $5.00\n"
+            "• `/addbalance 7319925086 10.50` - Add $10.50",
+            parse_mode='Markdown'
+        )
+        return
+    
+    target_uid = context.args[0].strip()
+    try:
+        amount = float(context.args[1])
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount! Use number like 5.00")
+        return
+    
+    if amount <= 0:
+        await update.message.reply_text("❌ Amount must be positive!")
+        return
+    
+    # Add balance
+    def add_bal(b):
+        b.setdefault("balance", 0)
+        b.setdefault("history", [])
+        b["balance"] += amount
+        b["history"].append({
+            "date": datetime.now(bd_tz).strftime('%Y-%m-%d %H:%M:%S'),
+            "cc": "ADMIN",
+            "amount": amount,
+            "type": "ADMIN_ADD"
+        })
+        return b
+    
+    result = balances.modify(target_uid, add_bal)
+    
+    await update.message.reply_text(
+        f"✅ *Balance Added!*\n\n"
+        f"👤 User: `{target_uid}`\n"
+        f"💰 Amount: +${amount:.2f}\n"
+        f"🏦 New Balance: ${result['balance']:.2f}",
+        parse_mode='Markdown'
+    )
+    
+    # Notify user
+    try:
+        await context.bot.send_message(
+            int(target_uid),
+            f"💰 *Admin Added Balance!*\n\n"
+            f"💵 Amount: +${amount:.2f}\n"
+            f"🏦 New Balance: ${result['balance']:.2f}",
+            parse_mode='Markdown'
+        )
+    except:
+        pass
+    
+    print(f"   💰 Admin added ${amount:.2f} to user {target_uid}")
+
+async def cmd_removebalance(update, context):
+    """Admin: Remove balance from any user | Usage: /removebalance user_id amount"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args or len(context.args) < 2:
+        await update.message.reply_text(
+            "📝 *Usage:* `/removebalance user_id amount`\n\n"
+            "Example:\n"
+            "• `/removebalance 7015259172 3.00` - Remove $3.00\n"
+            "• `/removebalance 7319925086 1.50` - Remove $1.50",
+            parse_mode='Markdown'
+        )
+        return
+    
+    target_uid = context.args[0].strip()
+    try:
+        amount = float(context.args[1])
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount! Use number like 3.00")
+        return
+    
+    if amount <= 0:
+        await update.message.reply_text("❌ Amount must be positive!")
+        return
+    
+    # Get current balance
+    current = balances.get(target_uid, {"balance": 0, "history": []})
+    
+    if current.get("balance", 0) < amount:
+        await update.message.reply_text(
+            f"❌ Insufficient balance!\n"
+            f"Current: ${current['balance']:.2f}\n"
+            f"Trying to remove: ${amount:.2f}"
+        )
+        return
+    
+    # Remove balance
+    def remove_bal(b):
+        b["balance"] = b.get("balance", 0) - amount
+        b.setdefault("history", []).append({
+            "date": datetime.now(bd_tz).strftime('%Y-%m-%d %H:%M:%S'),
+            "cc": "ADMIN",
+            "amount": -amount,
+            "type": "ADMIN_REMOVE"
+        })
+        return b
+    
+    result = balances.modify(target_uid, remove_bal)
+    
+    await update.message.reply_text(
+        f"✅ *Balance Removed!*\n\n"
+        f"👤 User: `{target_uid}`\n"
+        f"💰 Amount: -${amount:.2f}\n"
+        f"🏦 New Balance: ${result['balance']:.2f}",
+        parse_mode='Markdown'
+    )
+    
+    # Notify user
+    try:
+        await context.bot.send_message(
+            int(target_uid),
+            f"⚠️ *Admin Removed Balance!*\n\n"
+            f"💵 Amount: -${amount:.2f}\n"
+            f"🏦 New Balance: ${result['balance']:.2f}\n\n"
+            f"Contact {REQUIRED_CHANNEL} for queries",
+            parse_mode='Markdown'
+        )
+    except:
+        pass
+    
+    print(f"   💰 Admin removed ${amount:.2f} from user {target_uid}")
+
+async def cmd_checkbalance(update, context):
+    """Admin: Check any user's balance | Usage: /checkbalance user_id"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args:
+        await update.message.reply_text(
+            "📝 *Usage:* `/checkbalance user_id`\n\n"
+            "Example: `/checkbalance 7015259172`",
+            parse_mode='Markdown'
+        )
+        return
+    
+    target_uid = context.args[0].strip()
+    
+    # Get user data
+    b = balances.get(target_uid, {"balance": 0, "history": []})
+    s = daily_stats.get(target_uid, {})
+    today = get_bd_date()
+    td = s.get(today, {"total": 0, "otp": 0})
+    
+    # Get wallet info
+    w = wallets.get(target_uid, {})
+    wallet_text = ""
+    if w:
+        nm = {"bkash": "bKash", "nagad": "Nagad", "binance": "Binance"}
+        wallet_text = "\n👛 *Wallets:*\n"
+        for m, a in w.items():
+            wallet_text += f"• {nm.get(m, m)}: `{a}`\n"
+    
+    await update.message.reply_text(
+        f"👤 *User Balance Info*\n\n"
+        f"🆔 ID: `{target_uid}`\n"
+        f"💰 Balance: ${b['balance']:.2f}\n"
+        f"📊 Today OTP: {td.get('otp', 0)}\n"
+        f"📱 Today Total: {td.get('total', 0)}"
+        f"{wallet_text}",
+        parse_mode='Markdown'
+    )
+
+async def cmd_setminwithdraw(update, context):
+    """Admin: Set minimum withdrawal amount | Usage: /setminwithdraw amount"""
+    global MIN_WITHDRAW
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    if not context.args:
+        await update.message.reply_text(
+            f"📝 *Usage:* `/setminwithdraw amount`\n\n"
+            f"Current: ${MIN_WITHDRAW:.2f}\n\n"
+            f"Example:\n"
+            f"• `/setminwithdraw 1.00` - Set to $1.00\n"
+            f"• `/setminwithdraw 0.25` - Set to $0.25",
+            parse_mode='Markdown'
+        )
+        return
+    
+    try:
+        new_amount = float(context.args[0])
+    except ValueError:
+        await update.message.reply_text("❌ Invalid amount! Use number like 1.00")
+        return
+    
+    if new_amount < 0.10:
+        await update.message.reply_text("❌ Minimum withdrawal cannot be less than $0.10!")
+        return
+    
+    old_amount = MIN_WITHDRAW
+    MIN_WITHDRAW = new_amount
+    
+    await update.message.reply_text(
+        f"✅ *Minimum Withdrawal Updated!*\n\n"
+        f"💰 Old: ${old_amount:.2f}\n"
+        f"💰 New: ${MIN_WITHDRAW:.2f}",
+        parse_mode='Markdown'
+    )
+    
+    print(f"   ⚙️ Min withdrawal changed: ${old_amount:.2f} → ${MIN_WITHDRAW:.2f}")
+
+async def cmd_allbalances(update, context):
+    """Admin: Show all users with balances | Usage: /allbalances"""
+    user = update.effective_user
+    
+    if user.id != ADMIN_ID:
+        await update.message.reply_text("❌ Admin only command!")
+        return
+    
+    # Collect all users with balances
+    all_users = []
+    total_balance = 0
+    
+    for uid in balances._data:
+        b = balances.get(uid, {"balance": 0})
+        bal = b.get("balance", 0)
+        if bal > 0:
+            all_users.append((uid, bal))
+            total_balance += bal
+    
+    if not all_users:
+        await update.message.reply_text("📊 No users with balance yet!")
+        return
+    
+    # Sort by balance descending
+    all_users.sort(key=lambda x: x[1], reverse=True)
+    
+    txt = "📊 *All User Balances*\n\n"
+    txt += f"━━━━━━━━━━━━━━━━━━━━━\n"
+    
+    for uid, bal in all_users[:20]:
+        txt += f"👤 `{uid[:10]}...` : ${bal:.2f}\n"
+    
+    if len(all_users) > 20:
+        txt += f"\n... and {len(all_users)-20} more users"
+    
+    txt += f"\n━━━━━━━━━━━━━━━━━━━━━\n"
+    txt += f"📊 Total: *{len(all_users)}* users\n"
+    txt += f"💰 Total Balance: *${total_balance:.2f}*"
+    
+    await update.message.reply_text(txt, parse_mode='Markdown')
+
+
 # ==================== DOWNLOAD ====================
 async def cmd_mystats(update, context):
     uid, bal = str(update.effective_user.id), get_balance(update.effective_user.id)
@@ -1421,7 +1695,6 @@ def run_fastapi():
     uvicorn.run(app, host="0.0.0.0", port=PORT, access_log=False)
 
 # ==================== MAIN ====================
-# ==================== MAIN ====================
 def main():
     threading.Thread(target=run_fastapi, daemon=True).start()
     print(f"✅ FastAPI: port {PORT}")
@@ -1442,6 +1715,13 @@ def main():
     app_bot.add_handler(CommandHandler("listrates", cmd_listrates))
     app_bot.add_handler(CommandHandler("saverates", cmd_saverates))
     
+    # Admin Balance Commands - ADD THESE 5 LINES
+    app_bot.add_handler(CommandHandler("addbalance", cmd_addbalance))
+    app_bot.add_handler(CommandHandler("removebalance", cmd_removebalance))
+    app_bot.add_handler(CommandHandler("checkbalance", cmd_checkbalance))
+    app_bot.add_handler(CommandHandler("setminwithdraw", cmd_setminwithdraw))
+    app_bot.add_handler(CommandHandler("allbalances", cmd_allbalances))
+    
     # Callbacks
     app_bot.add_handler(CallbackQueryHandler(wallet_callback, pattern="^w_"))
     app_bot.add_handler(CallbackQueryHandler(withdraw_callback, pattern="^wd_"))
@@ -1452,11 +1732,9 @@ def main():
     
     # Start cleanup task - FIXED for Python 3.14
     try:
-        # Try to get existing loop
         loop = asyncio.get_running_loop()
         loop.create_task(cleanup_task())
     except RuntimeError:
-        # No running loop, create one
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.create_task(cleanup_task())
@@ -1465,12 +1743,8 @@ def main():
     print("✅ BOT v3.1 STABLE RUNNING")
     print(f"📱 Max {MAX_ACTIVE_NUMBERS} numbers/user")
     print(f"🔑 Reply-based OTP (correct matching)")
-    print(f"🛡️ Copy-on-write (no race conditions)")
-    print(f"🧹 Auto memory cleanup")
-    print(f"💰 Admin: /addrate /removerate /listrates /saverates")
+    print(f"💰 Min withdraw: ${MIN_WITHDRAW:.2f}")
+    print(f"👑 Admin commands: addbalance removebalance checkbalance setminwithdraw allbalances")
     print("="*60 + "\n")
     
     app_bot.run_polling()
-
-if __name__ == "__main__":
-    main()
