@@ -459,18 +459,22 @@ def get_bd_hashtag():
     return (now - timedelta(days=1)).strftime('%Y%m%d') if now.hour < 16 else now.strftime('%Y%m%d')
 
 def extract_number(text):
+    """Extract CC + phone from text"""
     t = re.sub(r'[\s\-\(\)]', '', text.strip())
     if t.startswith('+'): t = t[1:]
+    
     for cc in sorted(COUNTRY_APIS.keys(), key=len, reverse=True):
         if t.startswith(cc):
             p = t[len(cc):]
             if 5 <= len(p) <= 15:
-                return cc, p, COUNTRY_APIS[cc]['dc']
+                # Fix: use 'dc' if exists, otherwise use cc
+                dc = COUNTRY_APIS[cc].get('dc', cc)
+                return cc, p, dc
+    
     if t.startswith('1') and len(t) == 11: return "11", t[1:], "1"
     if t.startswith('964'): return "964", t[3:], "964"
     if t.startswith('880'): return "880", t[3:], "880"
     return None, None, None
-
 def add_balance(user_id, cc, amount):
     """Atomic balance add"""
     def modifier(b):
