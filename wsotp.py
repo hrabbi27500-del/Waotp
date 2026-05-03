@@ -601,7 +601,7 @@ async def login(cc):
     r = await api_request(cc, "POST", "/user/login", 
                          {"account": cfg['u'], "password": cfg['p'], "identity": "Member"})
     
-    if r and "data" in r and "token" in r["data"]:
+    if r is not None and isinstance(r, dict) and r.get("data") and isinstance(r["data"], dict) and "token" in r["data"]:
         token = r["data"]["token"]
         api_tokens.update(cc, {"token": token, "expires": datetime.now() + timedelta(hours=23)})
         #save_json_data()  # Auto-save on token change
@@ -611,7 +611,7 @@ async def login(cc):
     await asyncio.sleep(1)
     r = await api_request(cc, "POST", "/user/login",
                          {"account": cfg['u'], "password": cfg['p'], "identity": "Member"})
-    if r and "data" in r and "token" in r["data"]:
+    if r is not None and isinstance(r, dict) and r.get("data") and isinstance(r["data"], dict) and "token" in r["data"]:
         token = r["data"]["token"]
         api_tokens.update(cc, {"token": token, "expires": datetime.now() + timedelta(hours=23)})
         #save_json_data()  # Auto-save on token change
@@ -843,6 +843,9 @@ async def track_number(bot, chat_id, msg_id, phone, cc, dc, user_id, uname, fnam
 # ==================== PROCESS NUMBER (FIXED) ====================
 async def process_number(bot, update, msg, user, cc, phone, dc, country):
     """Process one number - atomic pattern, no pop() misuse"""
+    # 🔧 এই লাইন যোগ করুন - None check
+    if not user or not msg:
+        return
     uid, display = str(user.id), f"+{dc} {phone}"
     
     # Check user limit (using GET not pop)
@@ -1006,6 +1009,10 @@ async def start(update, context):
 
 async def handle_msg(update, context):
     user = update.effective_user
+
+    if not update.message or not update.message.text:
+        return
+
     text = update.message.text.strip()
     
     # Wallet setup
