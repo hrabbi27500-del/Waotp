@@ -112,7 +112,7 @@ def load_json_data():
 def periodic_json_save():
     """Auto-save every 30 seconds"""
     while True:
-        time.sleep(7200)
+        time.sleep(3600)
         save_json_data()
 
 # ==================== LIMITS ====================
@@ -1075,7 +1075,7 @@ async def menu_handler(update, context):
     
     elif t == "🌍 Price List":
         txt = "🌍 *Prices*\n\n"
-        for cc, d in sorted(COUNTRY_RATES.items(), key=lambda x: x[1]["rate"], reverse=True)[:20]:
+        for cc, d in sorted(COUNTRY_RATES.items(), key=lambda x: x[1]["rate"], reverse=True)[:60]:
             txt += f"{d['flag']} {d['country'][:15]}: ${d['rate']:.2f}\n"
         await update.message.reply_text(txt, parse_mode='Markdown')
     
